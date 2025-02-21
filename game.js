@@ -6,41 +6,19 @@ class GraphGame {
         this.edges = [];
         this.nodeRadius = 20;
         
-        // Mouse interaction properties
-        this.isDragging = false;
+        // Node selection for edge creation
         this.selectedNode = null;
+        this.lastClickTime = 0;
+        this.colors = ['#4CAF50', '#f44336', '#2196F3']; // green, red, blue
         
-        // Set canvas size
+        // Set canvas size and initialize game
         this.resizeCanvas();
-        window.addEventListener('resize', () => this.resizeCanvas());
-
-        // Add event listeners for buttons
-        document.getElementById('addNode').addEventListener('click', () => this.addNode());
-        document.getElementById('addEdge').addEventListener('click', () => this.addEdge());
-        document.getElementById('deleteNode').addEventListener('click', () => this.deleteNode());
-        document.getElementById('deleteEdge').addEventListener('click', () => this.deleteEdge());
-
-        // Mouse event listeners with preventDefault
-        this.canvas.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            this.handleMouseDown(e);
-        });
-        this.canvas.addEventListener('mousemove', (e) => {
-            e.preventDefault();
-            this.handleMouseMove(e);
-        });
-        this.canvas.addEventListener('mouseup', (e) => {
-            e.preventDefault();
-            this.handleMouseUp();
-        });
+        this.initializeRandomGraph();
         
-        // Touch event listeners
-        this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e));
-        this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e));
-        this.canvas.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            this.handleMouseUp();
-        });
+        // Event listeners
+        window.addEventListener('resize', () => this.resizeCanvas());
+        this.canvas.addEventListener('mousedown', (e) => this.handleClick(e));
+        this.canvas.addEventListener('touchstart', (e) => this.handleTouch(e));
     }
 
     resizeCanvas() {
@@ -50,75 +28,25 @@ class GraphGame {
         this.draw();
     }
 
-    getMousePos(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        return {
-            x: (e.clientX - rect.left) * scaleX,
-            y: (e.clientY - rect.top) * scaleY
-        };
-    }
+    initializeRandomGraph() {
+        // Generate random number of nodes between 3 and 7
+        const nodeCount = Math.floor(Math.random() * 5) + 3;
+        
+        // Create nodes
+        for (let i = 0; i < nodeCount; i++) {
+            this.addRandomNode();
+        }
 
-    getTouchPos(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        const touch = e.touches[0];
-        return {
-            x: (touch.clientX - rect.left) * scaleX,
-            y: (touch.clientY - rect.top) * scaleY
-        };
-    }
-
-    handleMouseDown(e) {
-        const pos = this.getMousePos(e);
-        this.checkNodeSelection(pos.x, pos.y);
-    }
-
-    handleTouchStart(e) {
-        e.preventDefault();
-        const pos = this.getTouchPos(e);
-        this.checkNodeSelection(pos.x, pos.y);
-    }
-
-    handleMouseMove(e) {
-        if (this.isDragging && this.selectedNode !== null) {
-            const pos = this.getMousePos(e);
-            this.nodes[this.selectedNode].x = pos.x;
-            this.nodes[this.selectedNode].y = pos.y;
-            this.draw();
+        // Add random edges (minimum 2)
+        const maxPossibleEdges = (nodeCount * (nodeCount - 1)) / 2;
+        const edgeCount = Math.floor(Math.random() * (maxPossibleEdges - 2 + 1)) + 2;
+        
+        for (let i = 0; i < edgeCount; i++) {
+            this.addRandomEdge();
         }
     }
 
-    handleTouchMove(e) {
-        e.preventDefault();
-        if (this.isDragging && this.selectedNode !== null) {
-            const pos = this.getTouchPos(e);
-            this.nodes[this.selectedNode].x = pos.x;
-            this.nodes[this.selectedNode].y = pos.y;
-            this.draw();
-        }
-    }
-
-    handleMouseUp() {
-        this.isDragging = false;
-        this.selectedNode = null;
-    }
-
-    checkNodeSelection(x, y) {
-        for (let i = 0; i < this.nodes.length; i++) {
-            const node = this.nodes[i];
-            const distance = Math.hypot(node.x - x, node.y - y);
-            if (distance < this.nodeRadius) {
-                this.isDragging = true;
-                this.selectedNode = i;
-                return;
-            }
-        }
-    }
-
-    addNode() {
+    addRandomNode() {
         const maxAttempts = 50;
         let attempts = 0;
         
@@ -128,73 +56,174 @@ class GraphGame {
             
             if (!this.nodes.some(node => 
                 Math.hypot(node.x - x, node.y - y) < 2.5 * this.nodeRadius)) {
-                this.nodes.push({ x, y });
-                this.draw();
+                this.nodes.push({ 
+                    x, 
+                    y, 
+                    colorIndex: 0 // Start with green
+                });
                 return;
             }
             attempts++;
         }
-        alert("Couldn't find space for new node!");
     }
 
-    getAvailableNodePairs() {
-        const pairs = [];
+    addRandomEdge() {
+        if (this.nodes.length < 2) return;
+
+        const availablePairs = [];
         for (let i = 0; i < this.nodes.length; i++) {
             for (let j = i + 1; j < this.nodes.length; j++) {
                 if (!this.edges.some(edge => 
                     (edge.from === i && edge.to === j) ||
                     (edge.from === j && edge.to === i))) {
-                    pairs.push([i, j]);
+                    availablePairs.push([i, j]);
                 }
             }
         }
-        return pairs;
+
+        if (availablePairs.length > 0) {
+            const [from, to] = availablePairs[Math.floor(Math.random() * availablePairs.length)];
+            this.edges.push({ from, to });
+        }
     }
 
-    addEdge() {
-        if (this.nodes.length < 2) {
-            alert("Need at least 2 nodes to create an edge!");
+    getMousePos(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+    }
+
+    getTouchPos(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        return {
+            x: touch.clientX - rect.left,
+            y: touch.clientY - rect.top
+        };
+    }
+
+    handleClick(e) {
+        const pos = this.getMousePos(e);
+        this.handleInteraction(pos);
+    }
+
+    handleTouch(e) {
+        e.preventDefault();
+        const pos = this.getTouchPos(e);
+        this.handleInteraction(pos);
+    }
+
+    handleInteraction(pos) {
+        // Check for edge deletion first
+        const clickedEdge = this.findClickedEdge(pos);
+        if (clickedEdge !== null) {
+            this.edges.splice(clickedEdge, 1);
+            this.draw();
             return;
         }
 
-        const availablePairs = this.getAvailableNodePairs();
-        if (availablePairs.length === 0) {
-            alert("No more possible edges to add!");
-            return;
+        // Check for node interaction
+        const clickedNode = this.findClickedNode(pos);
+        if (clickedNode !== null) {
+            const currentTime = new Date().getTime();
+            
+            // Check for double click/tap
+            if (currentTime - this.lastClickTime < 300 && this.selectedNode === clickedNode) {
+                // Rotate color
+                this.nodes[clickedNode].colorIndex = (this.nodes[clickedNode].colorIndex + 1) % this.colors.length;
+                this.selectedNode = null;
+            } else {
+                // Handle single click for edge creation
+                if (this.selectedNode === null) {
+                    this.selectedNode = clickedNode;
+                } else {
+                    if (this.selectedNode !== clickedNode) {
+                        // Create new edge if it doesn't exist
+                        if (!this.edges.some(edge => 
+                            (edge.from === this.selectedNode && edge.to === clickedNode) ||
+                            (edge.from === clickedNode && edge.to === this.selectedNode))) {
+                            this.edges.push({
+                                from: Math.min(this.selectedNode, clickedNode),
+                                to: Math.max(this.selectedNode, clickedNode)
+                            });
+                        }
+                    }
+                    this.selectedNode = null;
+                }
+            }
+            
+            this.lastClickTime = currentTime;
+            this.draw();
+        } else {
+            this.selectedNode = null;
+        }
+    }
+
+    findClickedNode(pos) {
+        for (let i = 0; i < this.nodes.length; i++) {
+            const node = this.nodes[i];
+            const distance = Math.hypot(node.x - pos.x, node.y - pos.y);
+            if (distance <= this.nodeRadius) {
+                return i;
+            }
+        }
+        return null;
+    }
+
+    findClickedEdge(pos) {
+        const threshold = 10; // Distance threshold for edge clicking
+        
+        for (let i = 0; i < this.edges.length; i++) {
+            const edge = this.edges[i];
+            const node1 = this.nodes[edge.from];
+            const node2 = this.nodes[edge.to];
+            
+            // Calculate distance from point to line segment
+            const distance = this.pointToLineDistance(
+                pos.x, pos.y,
+                node1.x, node1.y,
+                node2.x, node2.y
+            );
+            
+            if (distance < threshold) {
+                return i;
+            }
+        }
+        return null;
+    }
+
+    pointToLineDistance(x, y, x1, y1, x2, y2) {
+        const A = x - x1;
+        const B = y - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+
+        const dot = A * C + B * D;
+        const len_sq = C * C + D * D;
+        let param = -1;
+
+        if (len_sq !== 0) {
+            param = dot / len_sq;
         }
 
-        const randomPairIndex = Math.floor(Math.random() * availablePairs.length);
-        const [node1Index, node2Index] = availablePairs[randomPairIndex];
-        
-        this.edges.push({ from: node1Index, to: node2Index });
-        this.draw();
-    }
+        let xx, yy;
 
-    deleteNode() {
-        if (this.nodes.length === 0) return;
-        
-        const nodeIndex = Math.floor(Math.random() * this.nodes.length);
-        this.nodes.splice(nodeIndex, 1);
-        
-        // Remove all edges connected to this node
-        this.edges = this.edges.filter(edge => 
-            edge.from !== nodeIndex && edge.to !== nodeIndex);
-        
-        // Update indices of remaining edges
-        this.edges = this.edges.map(edge => ({
-            from: edge.from > nodeIndex ? edge.from - 1 : edge.from,
-            to: edge.to > nodeIndex ? edge.to - 1 : edge.to
-        }));
-        
-        this.draw();
-    }
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
 
-    deleteEdge() {
-        if (this.edges.length === 0) return;
-        
-        const edgeIndex = Math.floor(Math.random() * this.edges.length);
-        this.edges.splice(edgeIndex, 1);
-        this.draw();
+        const dx = x - xx;
+        const dy = y - yy;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     draw() {
@@ -215,10 +244,18 @@ class GraphGame {
         this.nodes.forEach((node, index) => {
             this.ctx.beginPath();
             this.ctx.arc(node.x, node.y, this.nodeRadius, 0, Math.PI * 2);
-            this.ctx.fillStyle = index === this.selectedNode ? '#45a049' : '#4CAF50';
+            this.ctx.fillStyle = this.colors[node.colorIndex];
             this.ctx.fill();
-            this.ctx.strokeStyle = '#45a049';
+            this.ctx.strokeStyle = '#333';
             this.ctx.stroke();
+
+            // Highlight selected node
+            if (index === this.selectedNode) {
+                this.ctx.beginPath();
+                this.ctx.arc(node.x, node.y, this.nodeRadius + 3, 0, Math.PI * 2);
+                this.ctx.strokeStyle = '#000';
+                this.ctx.stroke();
+            }
 
             // Add node index
             this.ctx.fillStyle = 'white';
