@@ -6,23 +6,100 @@ class GraphGame {
         this.edges = [];
         this.nodeRadius = 20;
         
+        // Mouse interaction properties
+        this.isDragging = false;
+        this.selectedNode = null;
+        
         // Set canvas size
         this.resizeCanvas();
         window.addEventListener('resize', () => this.resizeCanvas());
 
-        // Add event listeners
+        // Add event listeners for buttons
         document.getElementById('addNode').addEventListener('click', () => this.addNode());
         document.getElementById('addEdge').addEventListener('click', () => this.addEdge());
         document.getElementById('deleteNode').addEventListener('click', () => this.deleteNode());
         document.getElementById('deleteEdge').addEventListener('click', () => this.deleteEdge());
+
+        // Add mouse event listeners
+        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        this.canvas.addEventListener('mouseup', () => this.handleMouseUp());
+        
+        // Add touch event listeners for mobile
+        this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e));
+        this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e));
+        this.canvas.addEventListener('touchend', () => this.handleMouseUp());
     }
 
     resizeCanvas() {
-        // Make canvas a square that fits the screen
         const size = Math.min(window.innerWidth - 40, window.innerHeight - 100);
         this.canvas.width = size;
         this.canvas.height = size;
         this.draw();
+    }
+
+    getMousePos(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+    }
+
+    getTouchPos(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        return {
+            x: touch.clientX - rect.left,
+            y: touch.clientY - rect.top
+        };
+    }
+
+    handleMouseDown(e) {
+        const pos = this.getMousePos(e);
+        this.checkNodeSelection(pos.x, pos.y);
+    }
+
+    handleTouchStart(e) {
+        e.preventDefault();
+        const pos = this.getTouchPos(e);
+        this.checkNodeSelection(pos.x, pos.y);
+    }
+
+    handleMouseMove(e) {
+        if (this.isDragging && this.selectedNode !== null) {
+            const pos = this.getMousePos(e);
+            this.nodes[this.selectedNode].x = pos.x;
+            this.nodes[this.selectedNode].y = pos.y;
+            this.draw();
+        }
+    }
+
+    handleTouchMove(e) {
+        e.preventDefault();
+        if (this.isDragging && this.selectedNode !== null) {
+            const pos = this.getTouchPos(e);
+            this.nodes[this.selectedNode].x = pos.x;
+            this.nodes[this.selectedNode].y = pos.y;
+            this.draw();
+        }
+    }
+
+    handleMouseUp() {
+        this.isDragging = false;
+        this.selectedNode = null;
+    }
+
+    checkNodeSelection(x, y) {
+        for (let i = 0; i < this.nodes.length; i++) {
+            const node = this.nodes[i];
+            const distance = Math.hypot(node.x - x, node.y - y);
+            if (distance < this.nodeRadius) {
+                this.isDragging = true;
+                this.selectedNode = i;
+                return;
+            }
+        }
     }
 
     addNode() {
@@ -33,7 +110,6 @@ class GraphGame {
             const x = this.nodeRadius + Math.random() * (this.canvas.width - 2 * this.nodeRadius);
             const y = this.nodeRadius + Math.random() * (this.canvas.height - 2 * this.nodeRadius);
             
-            // Check if the new node overlaps with existing nodes
             if (!this.nodes.some(node => 
                 Math.hypot(node.x - x, node.y - y) < 2.5 * this.nodeRadius)) {
                 this.nodes.push({ x, y });
@@ -45,25 +121,38 @@ class GraphGame {
         alert("Couldn't find space for new node!");
     }
 
+    getAvailableNodePairs() {
+        const pairs = [];
+        for (let i = 0; i < this.nodes.length; i++) {
+            for (let j = i + 1; j < this.nodes.length; j++) {
+                // Check if this pair already has an edge
+                if (!this.edges.some(edge => 
+                    (edge.from === i && edge.to === j) ||
+                    (edge.from === j && edge.to === i))) {
+                    pairs.push([i, j]);
+                }
+            }
+        }
+        return pairs;
+    }
+
     addEdge() {
         if (this.nodes.length < 2) {
             alert("Need at least 2 nodes to create an edge!");
             return;
         }
 
-        const node1Index = Math.floor(Math.random() * this.nodes.length);
-        let node2Index;
-        do {
-            node2Index = Math.floor(Math.random() * this.nodes.length);
-        } while (node1Index === node2Index);
-
-        // Check if edge already exists
-        if (!this.edges.some(edge => 
-            (edge.from === node1Index && edge.to === node2Index) ||
-            (edge.from === node2Index && edge.to === node1Index))) {
-            this.edges.push({ from: node1Index, to: node2Index });
-            this.draw();
+        const availablePairs = this.getAvailableNodePairs();
+        if (availablePairs.length === 0) {
+            alert("No more possible edges to add!");
+            return;
         }
+
+        const randomPairIndex = Math.floor(Math.random() * availablePairs.length);
+        const [node1Index, node2Index] = availablePairs[randomPairIndex];
+        
+        this.edges.push({ from: node1Index, to: node2Index });
+        this.draw();
     }
 
     deleteNode() {
@@ -111,7 +200,7 @@ class GraphGame {
         this.nodes.forEach((node, index) => {
             this.ctx.beginPath();
             this.ctx.arc(node.x, node.y, this.nodeRadius, 0, Math.PI * 2);
-            this.ctx.fillStyle = '#4CAF50';
+            this.ctx.fillStyle = index === this.selectedNode ? '#45a049' : '#4CAF50';
             this.ctx.fill();
             this.ctx.strokeStyle = '#45a049';
             this.ctx.stroke();
