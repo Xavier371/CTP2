@@ -11,6 +11,8 @@ class GraphGame {
         this.draggedNode = null;
         this.highlightedNode = null;
         this.lastClickTime = 0;
+        this.clickCount = 0;
+        this.lastClickedNode = null;
         this.colors = ['#4CAF50', '#f44336', '#2196F3']; // green, red, blue
         
         // Set canvas size and initialize game
@@ -27,9 +29,6 @@ class GraphGame {
         this.canvas.addEventListener('touchstart', (e) => this.handleStart(e));
         this.canvas.addEventListener('touchmove', (e) => this.handleMove(e));
         this.canvas.addEventListener('touchend', (e) => this.handleEnd(e));
-        
-        // Double click/tap for color change
-        this.canvas.addEventListener('dblclick', (e) => this.handleDoubleClick(e));
     }
 
     resizeCanvas() {
@@ -129,27 +128,50 @@ class GraphGame {
         e.preventDefault();
         const pos = this.getEventPos(e);
         const nodeIndex = this.findNodeAtPosition(pos);
+        const currentTime = Date.now();
         
         if (nodeIndex !== null) {
-            // Start dragging
-            this.isDragging = true;
-            this.draggedNode = nodeIndex;
-            
-            // If no node is highlighted or this is the highlighted node, just drag
-            if (this.highlightedNode === null || this.highlightedNode === nodeIndex) {
-                // Continue with drag
-            } else {
-                // Create edge with highlighted node
-                if (!this.edges.some(edge => 
-                    (edge.from === this.highlightedNode && edge.to === nodeIndex) ||
-                    (edge.from === nodeIndex && edge.to === this.highlightedNode))) {
-                    this.edges.push({
-                        from: Math.min(this.highlightedNode, nodeIndex),
-                        to: Math.max(this.highlightedNode, nodeIndex)
-                    });
+            // Node clicked
+            if (nodeIndex === this.lastClickedNode && currentTime - this.lastClickTime < 500) {
+                // Multiple clicks on same node
+                this.clickCount++;
+                if (this.clickCount === 2) {
+                    // Double click - change color
+                    this.nodes[nodeIndex].colorIndex = 
+                        (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
+                } else if (this.clickCount === 3) {
+                    // Triple click - delete node
+                    this.deleteNode(nodeIndex);
+                    this.clickCount = 0;
+                    this.lastClickedNode = null;
+                    this.highlightedNode = null;
                 }
-                this.highlightedNode = null;
+            } else {
+                // First click on node
+                this.clickCount = 1;
+                
+                // Start drag
+                this.isDragging = true;
+                this.draggedNode = nodeIndex;
+                
+                // Handle highlighting and edge creation
+                if (this.highlightedNode !== null && this.highlightedNode !== nodeIndex) {
+                    // Create edge between highlighted and current node
+                    if (!this.edges.some(edge => 
+                        (edge.from === this.highlightedNode && edge.to === nodeIndex) ||
+                        (edge.from === nodeIndex && edge.to === this.highlightedNode))) {
+                        this.edges.push({
+                            from: Math.min(this.highlightedNode, nodeIndex),
+                            to: Math.max(this.highlightedNode, nodeIndex)
+                        });
+                    }
+                    this.highlightedNode = null;
+                } else {
+                    this.highlightedNode = nodeIndex;
+                }
             }
+            this.lastClickTime = currentTime;
+            this.lastClickedNode = nodeIndex;
         } else {
             const edgeIndex = this.findEdgeAtPosition(pos);
             if (edgeIndex !== null) {
@@ -163,8 +185,9 @@ class GraphGame {
                     y: pos.y,
                     colorIndex: 0
                 });
-                this.highlightedNode = null;
             }
+            this.clickCount = 0;
+            this.lastClickedNode = null;
         }
         this.draw();
     }
@@ -181,11 +204,9 @@ class GraphGame {
 
     handleEnd(e) {
         e.preventDefault();
-        if (!this.isDragging && this.draggedNode !== null) {
-            // This was a click/tap, not a drag
-            if (this.highlightedNode === null) {
-                this.highlightedNode = this.draggedNode;
-            } else {
+        if (this.isDragging) {
+            // Clear highlight if this was a drag
+            if (!this.clickCount) {
                 this.highlightedNode = null;
             }
         }
@@ -194,14 +215,19 @@ class GraphGame {
         this.draw();
     }
 
-    handleDoubleClick(e) {
-        e.preventDefault();
-        const pos = this.getEventPos(e);
-        const nodeIndex = this.findNodeAtPosition(pos);
-        if (nodeIndex !== null) {
-            this.nodes[nodeIndex].colorIndex = (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
-            this.draw();
-        }
+    deleteNode(nodeIndex) {
+        // Remove the node
+        this.nodes.splice(nodeIndex, 1);
+        
+        // Remove connected edges
+        this.edges = this.edges.filter(edge => 
+            edge.from !== nodeIndex && edge.to !== nodeIndex);
+        
+        // Update edge indices for remaining edges
+        this.edges = this.edges.map(edge => ({
+            from: edge.from > nodeIndex ? edge.from - 1 : edge.from,
+            to: edge.to > nodeIndex ? edge.to - 1 : edge.to
+        }));
     }
 
     draw() {
