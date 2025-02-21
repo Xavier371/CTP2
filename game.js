@@ -17,13 +17,18 @@ class GraphGame {
         this.resizeCanvas();
         this.initializeRandomGraph();
         
-        // Event listeners
+        // Mouse event listeners
         window.addEventListener('resize', () => this.resizeCanvas());
-        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+        this.canvas.addEventListener('mousedown', (e) => this.handleStart(e));
+        this.canvas.addEventListener('mousemove', (e) => this.handleMove(e));
+        this.canvas.addEventListener('mouseup', (e) => this.handleEnd(e));
         
-        // Double click for color change
+        // Touch event listeners
+        this.canvas.addEventListener('touchstart', (e) => this.handleStart(e));
+        this.canvas.addEventListener('touchmove', (e) => this.handleMove(e));
+        this.canvas.addEventListener('touchend', (e) => this.handleEnd(e));
+        
+        // Double click/tap for color change
         this.canvas.addEventListener('dblclick', (e) => this.handleDoubleClick(e));
     }
 
@@ -60,11 +65,13 @@ class GraphGame {
         this.draw();
     }
 
-    getMousePos(e) {
+    getEventPos(e) {
         const rect = this.canvas.getBoundingClientRect();
+        const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+        const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
         return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
+            x: clientX - rect.left,
+            y: clientY - rect.top
         };
     }
 
@@ -85,7 +92,6 @@ class GraphGame {
             const node1 = this.nodes[edge.from];
             const node2 = this.nodes[edge.to];
             
-            // Calculate distance from point to line segment
             const A = pos.x - node1.x;
             const B = pos.y - node1.y;
             const C = node2.x - node1.x;
@@ -112,70 +118,85 @@ class GraphGame {
             }
             
             const distance = Math.hypot(pos.x - xx, pos.y - yy);
-            if (distance < 10) { // Click tolerance for edges
+            if (distance < 10) {
                 return i;
             }
         }
         return null;
     }
 
-    handleMouseDown(e) {
-        const pos = this.getMousePos(e);
+    handleStart(e) {
+        e.preventDefault();
+        const pos = this.getEventPos(e);
         const nodeIndex = this.findNodeAtPosition(pos);
-        const edgeIndex = this.findEdgeAtPosition(pos);
-
+        
         if (nodeIndex !== null) {
-            // Node clicked
-            if (this.highlightedNode === null) {
-                this.highlightedNode = nodeIndex;
-                this.isDragging = true;
-                this.draggedNode = nodeIndex;
+            // Start dragging
+            this.isDragging = true;
+            this.draggedNode = nodeIndex;
+            
+            // If no node is highlighted or this is the highlighted node, just drag
+            if (this.highlightedNode === null || this.highlightedNode === nodeIndex) {
+                // Continue with drag
             } else {
-                // Create edge if different node
-                if (this.highlightedNode !== nodeIndex) {
-                    if (!this.edges.some(edge => 
-                        (edge.from === this.highlightedNode && edge.to === nodeIndex) ||
-                        (edge.from === nodeIndex && edge.to === this.highlightedNode))) {
-                        this.edges.push({
-                            from: Math.min(this.highlightedNode, nodeIndex),
-                            to: Math.max(this.highlightedNode, nodeIndex)
-                        });
-                    }
+                // Create edge with highlighted node
+                if (!this.edges.some(edge => 
+                    (edge.from === this.highlightedNode && edge.to === nodeIndex) ||
+                    (edge.from === nodeIndex && edge.to === this.highlightedNode))) {
+                    this.edges.push({
+                        from: Math.min(this.highlightedNode, nodeIndex),
+                        to: Math.max(this.highlightedNode, nodeIndex)
+                    });
                 }
                 this.highlightedNode = null;
             }
-        } else if (edgeIndex !== null) {
-            // Edge clicked - delete it
-            this.edges.splice(edgeIndex, 1);
-            this.highlightedNode = null;
         } else {
-            // Empty space clicked - create new node
-            this.nodes.push({
-                x: pos.x,
-                y: pos.y,
-                colorIndex: 0
-            });
-            this.highlightedNode = null;
+            const edgeIndex = this.findEdgeAtPosition(pos);
+            if (edgeIndex !== null) {
+                // Delete edge
+                this.edges.splice(edgeIndex, 1);
+                this.highlightedNode = null;
+            } else {
+                // Create new node
+                this.nodes.push({
+                    x: pos.x,
+                    y: pos.y,
+                    colorIndex: 0
+                });
+                this.highlightedNode = null;
+            }
         }
         this.draw();
     }
 
-    handleMouseMove(e) {
+    handleMove(e) {
+        e.preventDefault();
         if (this.isDragging && this.draggedNode !== null) {
-            const pos = this.getMousePos(e);
+            const pos = this.getEventPos(e);
             this.nodes[this.draggedNode].x = pos.x;
             this.nodes[this.draggedNode].y = pos.y;
             this.draw();
         }
     }
 
-    handleMouseUp(e) {
+    handleEnd(e) {
+        e.preventDefault();
+        if (!this.isDragging && this.draggedNode !== null) {
+            // This was a click/tap, not a drag
+            if (this.highlightedNode === null) {
+                this.highlightedNode = this.draggedNode;
+            } else {
+                this.highlightedNode = null;
+            }
+        }
         this.isDragging = false;
         this.draggedNode = null;
+        this.draw();
     }
 
     handleDoubleClick(e) {
-        const pos = this.getMousePos(e);
+        e.preventDefault();
+        const pos = this.getEventPos(e);
         const nodeIndex = this.findNodeAtPosition(pos);
         if (nodeIndex !== null) {
             this.nodes[nodeIndex].colorIndex = (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
