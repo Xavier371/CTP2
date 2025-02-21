@@ -8,8 +8,8 @@ class GraphGame {
         
         // Interaction states
         this.isDragging = false;
-        this.selectedNode = null;
         this.draggedNode = null;
+        this.highlightedNode = null;
         this.lastClickTime = 0;
         this.colors = ['#4CAF50', '#f44336', '#2196F3']; // green, red, blue
         
@@ -19,16 +19,12 @@ class GraphGame {
         
         // Event listeners
         window.addEventListener('resize', () => this.resizeCanvas());
-        
-        // Mouse events
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mouseup', () => this.handleMouseUp());
+        this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
         
-        // Touch events
-        this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e));
-        this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e));
-        this.canvas.addEventListener('touchend', () => this.handleMouseUp());
+        // Double click for color change
+        this.canvas.addEventListener('dblclick', (e) => this.handleDoubleClick(e));
     }
 
     resizeCanvas() {
@@ -39,92 +35,129 @@ class GraphGame {
     }
 
     initializeRandomGraph() {
-        const nodeCount = Math.floor(Math.random() * 5) + 3; // 3 to 7 nodes
-        
+        // Generate 3-7 nodes
+        const nodeCount = Math.floor(Math.random() * 5) + 3;
         for (let i = 0; i < nodeCount; i++) {
-            this.addRandomNode();
-        }
-
-        const maxPossibleEdges = (nodeCount * (nodeCount - 1)) / 2;
-        const edgeCount = Math.floor(Math.random() * (maxPossibleEdges - 2 + 1)) + 2;
-        
-        for (let i = 0; i < edgeCount; i++) {
-            this.addRandomEdge();
-        }
-    }
-
-    addRandomNode() {
-        const maxAttempts = 50;
-        let attempts = 0;
-        
-        while (attempts < maxAttempts) {
             const x = this.nodeRadius + Math.random() * (this.canvas.width - 2 * this.nodeRadius);
             const y = this.nodeRadius + Math.random() * (this.canvas.height - 2 * this.nodeRadius);
-            
-            if (!this.nodes.some(node => 
-                Math.hypot(node.x - x, node.y - y) < 2.5 * this.nodeRadius)) {
-                this.nodes.push({ 
-                    x, 
-                    y, 
-                    colorIndex: 0 // Start with green
-                });
-                return;
-            }
-            attempts++;
+            this.nodes.push({ x, y, colorIndex: 0 });
         }
-    }
 
-    addRandomEdge() {
-        if (this.nodes.length < 2) return;
-
-        const availablePairs = [];
-        for (let i = 0; i < this.nodes.length; i++) {
-            for (let j = i + 1; j < this.nodes.length; j++) {
-                if (!this.edges.some(edge => 
-                    (edge.from === i && edge.to === j) ||
-                    (edge.from === j && edge.to === i))) {
-                    availablePairs.push([i, j]);
-                }
+        // Generate random edges
+        const edgeCount = Math.floor(Math.random() * (nodeCount * 2)) + 1;
+        for (let i = 0; i < edgeCount; i++) {
+            const from = Math.floor(Math.random() * nodeCount);
+            let to = Math.floor(Math.random() * nodeCount);
+            while (to === from) {
+                to = Math.floor(Math.random() * nodeCount);
+            }
+            if (!this.edges.some(edge => 
+                (edge.from === from && edge.to === to) ||
+                (edge.from === to && edge.to === from))) {
+                this.edges.push({ from, to });
             }
         }
-
-        if (availablePairs.length > 0) {
-            const [from, to] = availablePairs[Math.floor(Math.random() * availablePairs.length)];
-            this.edges.push({ from, to });
-        }
+        this.draw();
     }
 
     getMousePos(e) {
         const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
         return {
-            x: (e.clientX - rect.left) * scaleX,
-            y: (e.clientY - rect.top) * scaleY
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
         };
     }
 
-    getTouchPos(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        const touch = e.touches[0];
-        return {
-            x: (touch.clientX - rect.left) * scaleX,
-            y: (touch.clientY - rect.top) * scaleY
-        };
+    findNodeAtPosition(pos) {
+        for (let i = 0; i < this.nodes.length; i++) {
+            const node = this.nodes[i];
+            const distance = Math.hypot(node.x - pos.x, node.y - pos.y);
+            if (distance <= this.nodeRadius) {
+                return i;
+            }
+        }
+        return null;
+    }
+
+    findEdgeAtPosition(pos) {
+        for (let i = 0; i < this.edges.length; i++) {
+            const edge = this.edges[i];
+            const node1 = this.nodes[edge.from];
+            const node2 = this.nodes[edge.to];
+            
+            // Calculate distance from point to line segment
+            const A = pos.x - node1.x;
+            const B = pos.y - node1.y;
+            const C = node2.x - node1.x;
+            const D = node2.y - node1.y;
+            
+            const dot = A * C + B * D;
+            const len_sq = C * C + D * D;
+            let param = -1;
+            
+            if (len_sq !== 0) {
+                param = dot / len_sq;
+            }
+            
+            let xx, yy;
+            if (param < 0) {
+                xx = node1.x;
+                yy = node1.y;
+            } else if (param > 1) {
+                xx = node2.x;
+                yy = node2.y;
+            } else {
+                xx = node1.x + param * C;
+                yy = node1.y + param * D;
+            }
+            
+            const distance = Math.hypot(pos.x - xx, pos.y - yy);
+            if (distance < 10) { // Click tolerance for edges
+                return i;
+            }
+        }
+        return null;
     }
 
     handleMouseDown(e) {
-        e.preventDefault();
         const pos = this.getMousePos(e);
-        this.startInteraction(pos);
-    }
+        const nodeIndex = this.findNodeAtPosition(pos);
+        const edgeIndex = this.findEdgeAtPosition(pos);
 
-    handleTouchStart(e) {
-        e.preventDefault();
-        const pos = this.getTouchPos(e);
-        this.startInteraction(pos);
+        if (nodeIndex !== null) {
+            // Node clicked
+            if (this.highlightedNode === null) {
+                this.highlightedNode = nodeIndex;
+                this.isDragging = true;
+                this.draggedNode = nodeIndex;
+            } else {
+                // Create edge if different node
+                if (this.highlightedNode !== nodeIndex) {
+                    if (!this.edges.some(edge => 
+                        (edge.from === this.highlightedNode && edge.to === nodeIndex) ||
+                        (edge.from === nodeIndex && edge.to === this.highlightedNode))) {
+                        this.edges.push({
+                            from: Math.min(this.highlightedNode, nodeIndex),
+                            to: Math.max(this.highlightedNode, nodeIndex)
+                        });
+                    }
+                }
+                this.highlightedNode = null;
+            }
+        } else if (edgeIndex !== null) {
+            // Edge clicked - delete it
+            this.edges.splice(edgeIndex, 1);
+            this.highlightedNode = null;
+        } else {
+            // Empty space clicked - create new node
+            this.nodes.push({
+                x: pos.x,
+                y: pos.y,
+                colorIndex: 0
+            });
+            this.highlightedNode = null;
+        }
+        this.draw();
     }
 
     handleMouseMove(e) {
@@ -136,138 +169,18 @@ class GraphGame {
         }
     }
 
-    handleTouchMove(e) {
-        if (this.isDragging && this.draggedNode !== null) {
-            e.preventDefault();
-            const pos = this.getTouchPos(e);
-            this.nodes[this.draggedNode].x = pos.x;
-            this.nodes[this.draggedNode].y = pos.y;
-            this.draw();
-        }
-    }
-
-    handleMouseUp() {
-        if (!this.isDragging && this.draggedNode !== null) {
-            // This was a click, not a drag
-            this.handleNodeClick(this.draggedNode);
-        }
+    handleMouseUp(e) {
         this.isDragging = false;
         this.draggedNode = null;
-        this.draw();
     }
 
-    startInteraction(pos) {
-        // Always check for node first
-        const clickedNode = this.findClickedNode(pos);
-        if (clickedNode !== null) {
-            const currentTime = new Date().getTime();
-            if (currentTime - this.lastClickTime < 300 && this.draggedNode === clickedNode) {
-                // Double click detected - change color
-                this.nodes[clickedNode].colorIndex = (this.nodes[clickedNode].colorIndex + 1) % this.colors.length;
-                this.draggedNode = null;
-                this.selectedNode = null;
-            } else {
-                // Single click/drag start
-                this.isDragging = true;
-                this.draggedNode = clickedNode;
-            }
-            this.lastClickTime = currentTime;
+    handleDoubleClick(e) {
+        const pos = this.getMousePos(e);
+        const nodeIndex = this.findNodeAtPosition(pos);
+        if (nodeIndex !== null) {
+            this.nodes[nodeIndex].colorIndex = (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
             this.draw();
-            return;
         }
-
-        // If no node clicked, check for edge
-        const clickedEdge = this.findClickedEdge(pos);
-        if (clickedEdge !== null) {
-            this.edges.splice(clickedEdge, 1);
-            this.draw();
-            return;
-        }
-
-        // If nothing clicked, reset selection
-        this.selectedNode = null;
-        this.draw();
-    }
-
-    handleNodeClick(nodeIndex) {
-        if (this.selectedNode === null) {
-            this.selectedNode = nodeIndex;
-        } else if (this.selectedNode !== nodeIndex) {
-            // Create new edge if it doesn't exist
-            if (!this.edges.some(edge => 
-                (edge.from === this.selectedNode && edge.to === nodeIndex) ||
-                (edge.from === nodeIndex && edge.to === this.selectedNode))) {
-                this.edges.push({
-                    from: Math.min(this.selectedNode, nodeIndex),
-                    to: Math.max(this.selectedNode, nodeIndex)
-                });
-            }
-            this.selectedNode = null;
-        }
-        this.draw();
-    }
-
-    findClickedNode(pos) {
-        for (let i = 0; i < this.nodes.length; i++) {
-            const node = this.nodes[i];
-            const distance = Math.hypot(node.x - pos.x, node.y - pos.y);
-            if (distance <= this.nodeRadius) {
-                return i;
-            }
-        }
-        return null;
-    }
-
-    findClickedEdge(pos) {
-        const threshold = 10;
-        for (let i = 0; i < this.edges.length; i++) {
-            const edge = this.edges[i];
-            const node1 = this.nodes[edge.from];
-            const node2 = this.nodes[edge.to];
-            
-            const distance = this.pointToLineDistance(
-                pos.x, pos.y,
-                node1.x, node1.y,
-                node2.x, node2.y
-            );
-            
-            if (distance < threshold) {
-                return i;
-            }
-        }
-        return null;
-    }
-
-    pointToLineDistance(x, y, x1, y1, x2, y2) {
-        const A = x - x1;
-        const B = y - y1;
-        const C = x2 - x1;
-        const D = y2 - y1;
-
-        const dot = A * C + B * D;
-        const len_sq = C * C + D * D;
-        let param = -1;
-
-        if (len_sq !== 0) {
-            param = dot / len_sq;
-        }
-
-        let xx, yy;
-
-        if (param < 0) {
-            xx = x1;
-            yy = y1;
-        } else if (param > 1) {
-            xx = x2;
-            yy = y2;
-        } else {
-            xx = x1 + param * C;
-            yy = y1 + param * D;
-        }
-
-        const dx = x - xx;
-        const dy = y - yy;
-        return Math.sqrt(dx * dx + dy * dy);
     }
 
     draw() {
@@ -290,16 +203,10 @@ class GraphGame {
             this.ctx.arc(node.x, node.y, this.nodeRadius, 0, Math.PI * 2);
             this.ctx.fillStyle = this.colors[node.colorIndex];
             this.ctx.fill();
-            this.ctx.strokeStyle = '#333';
+            this.ctx.strokeStyle = index === this.highlightedNode ? '#000' : '#333';
+            this.ctx.lineWidth = index === this.highlightedNode ? 3 : 1;
             this.ctx.stroke();
-
-            // Highlight selected node
-            if (index === this.selectedNode) {
-                this.ctx.beginPath();
-                this.ctx.arc(node.x, node.y, this.nodeRadius + 3, 0, Math.PI * 2);
-                this.ctx.strokeStyle = '#000';
-                this.ctx.stroke();
-            }
+            this.ctx.lineWidth = 1;
 
             // Add node index
             this.ctx.fillStyle = 'white';
