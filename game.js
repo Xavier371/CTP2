@@ -139,6 +139,7 @@ class GraphGame {
                     // Double click - change color
                     this.nodes[nodeIndex].colorIndex = 
                         (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
+                    this.highlightedNode = null;  // Clear highlight on color change
                 } else if (this.clickCount === 3) {
                     // Triple click - delete node
                     this.deleteNode(nodeIndex);
@@ -154,8 +155,10 @@ class GraphGame {
                 this.isDragging = true;
                 this.draggedNode = nodeIndex;
                 
-                // Handle highlighting and edge creation
-                if (this.highlightedNode !== null && this.highlightedNode !== nodeIndex) {
+                // Toggle highlight on same node, create edge with different node
+                if (this.highlightedNode === nodeIndex) {
+                    this.highlightedNode = null;
+                } else if (this.highlightedNode !== null) {
                     // Create edge between highlighted and current node
                     if (!this.edges.some(edge => 
                         (edge.from === this.highlightedNode && edge.to === nodeIndex) ||
@@ -204,11 +207,9 @@ class GraphGame {
 
     handleEnd(e) {
         e.preventDefault();
-        if (this.isDragging) {
-            // Clear highlight if this was a drag
-            if (!this.clickCount) {
-                this.highlightedNode = null;
-            }
+        if (this.isDragging && !this.clickCount) {
+            // Clear highlight only if this was a pure drag (no clicks involved)
+            this.highlightedNode = null;
         }
         this.isDragging = false;
         this.draggedNode = null;
