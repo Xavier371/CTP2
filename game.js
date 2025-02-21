@@ -20,15 +20,27 @@ class GraphGame {
         document.getElementById('deleteNode').addEventListener('click', () => this.deleteNode());
         document.getElementById('deleteEdge').addEventListener('click', () => this.deleteEdge());
 
-        // Add mouse event listeners
-        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mouseup', () => this.handleMouseUp());
+        // Mouse event listeners with preventDefault
+        this.canvas.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            this.handleMouseDown(e);
+        });
+        this.canvas.addEventListener('mousemove', (e) => {
+            e.preventDefault();
+            this.handleMouseMove(e);
+        });
+        this.canvas.addEventListener('mouseup', (e) => {
+            e.preventDefault();
+            this.handleMouseUp();
+        });
         
-        // Add touch event listeners for mobile
+        // Touch event listeners
         this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e));
         this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e));
-        this.canvas.addEventListener('touchend', () => this.handleMouseUp());
+        this.canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.handleMouseUp();
+        });
     }
 
     resizeCanvas() {
@@ -40,18 +52,22 @@ class GraphGame {
 
     getMousePos(e) {
         const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
         return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY
         };
     }
 
     getTouchPos(e) {
         const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
         const touch = e.touches[0];
         return {
-            x: touch.clientX - rect.left,
-            y: touch.clientY - rect.top
+            x: (touch.clientX - rect.left) * scaleX,
+            y: (touch.clientY - rect.top) * scaleY
         };
     }
 
@@ -125,7 +141,6 @@ class GraphGame {
         const pairs = [];
         for (let i = 0; i < this.nodes.length; i++) {
             for (let j = i + 1; j < this.nodes.length; j++) {
-                // Check if this pair already has an edge
                 if (!this.edges.some(edge => 
                     (edge.from === i && edge.to === j) ||
                     (edge.from === j && edge.to === i))) {
