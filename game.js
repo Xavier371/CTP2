@@ -6,8 +6,10 @@ class GraphGame {
         this.edges = [];
         this.nodeRadius = 20;
         
-        // Node selection for edge creation
+        // Interaction states
+        this.isDragging = false;
         this.selectedNode = null;
+        this.draggedNode = null;
         this.lastClickTime = 0;
         this.colors = ['#4CAF50', '#f44336', '#2196F3']; // green, red, blue
         
@@ -17,8 +19,16 @@ class GraphGame {
         
         // Event listeners
         window.addEventListener('resize', () => this.resizeCanvas());
-        this.canvas.addEventListener('mousedown', (e) => this.handleClick(e));
-        this.canvas.addEventListener('touchstart', (e) => this.handleTouch(e));
+        
+        // Mouse events
+        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        this.canvas.addEventListener('mouseup', () => this.handleMouseUp());
+        
+        // Touch events
+        this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e));
+        this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e));
+        this.canvas.addEventListener('touchend', () => this.handleMouseUp());
     }
 
     resizeCanvas() {
@@ -29,15 +39,12 @@ class GraphGame {
     }
 
     initializeRandomGraph() {
-        // Generate random number of nodes between 3 and 7
-        const nodeCount = Math.floor(Math.random() * 5) + 3;
+        const nodeCount = Math.floor(Math.random() * 5) + 3; // 3 to 7 nodes
         
-        // Create nodes
         for (let i = 0; i < nodeCount; i++) {
             this.addRandomNode();
         }
 
-        // Add random edges (minimum 2)
         const maxPossibleEdges = (nodeCount * (nodeCount - 1)) / 2;
         const edgeCount = Math.floor(Math.random() * (maxPossibleEdges - 2 + 1)) + 2;
         
@@ -89,34 +96,87 @@ class GraphGame {
 
     getMousePos(e) {
         const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
         return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY
         };
     }
 
     getTouchPos(e) {
         const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
         const touch = e.touches[0];
         return {
-            x: touch.clientX - rect.left,
-            y: touch.clientY - rect.top
+            x: (touch.clientX - rect.left) * scaleX,
+            y: (touch.clientY - rect.top) * scaleY
         };
     }
 
-    handleClick(e) {
+    handleMouseDown(e) {
+        e.preventDefault();
         const pos = this.getMousePos(e);
-        this.handleInteraction(pos);
+        this.startInteraction(pos);
     }
 
-    handleTouch(e) {
+    handleTouchStart(e) {
         e.preventDefault();
         const pos = this.getTouchPos(e);
-        this.handleInteraction(pos);
+        this.startInteraction(pos);
     }
 
-    handleInteraction(pos) {
-        // Check for edge deletion first
+    handleMouseMove(e) {
+        if (this.isDragging && this.draggedNode !== null) {
+            const pos = this.getMousePos(e);
+            this.nodes[this.draggedNode].x = pos.x;
+            this.nodes[this.draggedNode].y = pos.y;
+            this.draw();
+        }
+    }
+
+    handleTouchMove(e) {
+        if (this.isDragging && this.draggedNode !== null) {
+            e.preventDefault();
+            const pos = this.getTouchPos(e);
+            this.nodes[this.draggedNode].x = pos.x;
+            this.nodes[this.draggedNode].y = pos.y;
+            this.draw();
+        }
+    }
+
+    handleMouseUp() {
+        if (!this.isDragging && this.draggedNode !== null) {
+            // This was a click, not a drag
+            this.handleNodeClick(this.draggedNode);
+        }
+        this.isDragging = false;
+        this.draggedNode = null;
+        this.draw();
+    }
+
+    startInteraction(pos) {
+        // Always check for node first
+        const clickedNode = this.findClickedNode(pos);
+        if (clickedNode !== null) {
+            const currentTime = new Date().getTime();
+            if (currentTime - this.lastClickTime < 300 && this.draggedNode === clickedNode) {
+                // Double click detected - change color
+                this.nodes[clickedNode].colorIndex = (this.nodes[clickedNode].colorIndex + 1) % this.colors.length;
+                this.draggedNode = null;
+                this.selectedNode = null;
+            } else {
+                // Single click/drag start
+                this.isDragging = true;
+                this.draggedNode = clickedNode;
+            }
+            this.lastClickTime = currentTime;
+            this.draw();
+            return;
+        }
+
+        // If no node clicked, check for edge
         const clickedEdge = this.findClickedEdge(pos);
         if (clickedEdge !== null) {
             this.edges.splice(clickedEdge, 1);
@@ -124,41 +184,27 @@ class GraphGame {
             return;
         }
 
-        // Check for node interaction
-        const clickedNode = this.findClickedNode(pos);
-        if (clickedNode !== null) {
-            const currentTime = new Date().getTime();
-            
-            // Check for double click/tap
-            if (currentTime - this.lastClickTime < 300 && this.selectedNode === clickedNode) {
-                // Rotate color
-                this.nodes[clickedNode].colorIndex = (this.nodes[clickedNode].colorIndex + 1) % this.colors.length;
-                this.selectedNode = null;
-            } else {
-                // Handle single click for edge creation
-                if (this.selectedNode === null) {
-                    this.selectedNode = clickedNode;
-                } else {
-                    if (this.selectedNode !== clickedNode) {
-                        // Create new edge if it doesn't exist
-                        if (!this.edges.some(edge => 
-                            (edge.from === this.selectedNode && edge.to === clickedNode) ||
-                            (edge.from === clickedNode && edge.to === this.selectedNode))) {
-                            this.edges.push({
-                                from: Math.min(this.selectedNode, clickedNode),
-                                to: Math.max(this.selectedNode, clickedNode)
-                            });
-                        }
-                    }
-                    this.selectedNode = null;
-                }
+        // If nothing clicked, reset selection
+        this.selectedNode = null;
+        this.draw();
+    }
+
+    handleNodeClick(nodeIndex) {
+        if (this.selectedNode === null) {
+            this.selectedNode = nodeIndex;
+        } else if (this.selectedNode !== nodeIndex) {
+            // Create new edge if it doesn't exist
+            if (!this.edges.some(edge => 
+                (edge.from === this.selectedNode && edge.to === nodeIndex) ||
+                (edge.from === nodeIndex && edge.to === this.selectedNode))) {
+                this.edges.push({
+                    from: Math.min(this.selectedNode, nodeIndex),
+                    to: Math.max(this.selectedNode, nodeIndex)
+                });
             }
-            
-            this.lastClickTime = currentTime;
-            this.draw();
-        } else {
             this.selectedNode = null;
         }
+        this.draw();
     }
 
     findClickedNode(pos) {
@@ -173,14 +219,12 @@ class GraphGame {
     }
 
     findClickedEdge(pos) {
-        const threshold = 10; // Distance threshold for edge clicking
-        
+        const threshold = 10;
         for (let i = 0; i < this.edges.length; i++) {
             const edge = this.edges[i];
             const node1 = this.nodes[edge.from];
             const node2 = this.nodes[edge.to];
             
-            // Calculate distance from point to line segment
             const distance = this.pointToLineDistance(
                 pos.x, pos.y,
                 node1.x, node1.y,
