@@ -32,7 +32,12 @@ class GraphGame {
     }
 
     resizeCanvas() {
-        const size = Math.min(window.innerWidth - 40, window.innerHeight - 200);
+    // Calculate size based on viewport, but larger than before
+        const size = Math.min(
+            window.innerWidth * 0.85,    // Use 85% of window width
+            window.innerHeight * 0.7     // Use 70% of window height
+        );
+        
         this.canvas.style.width = size + 'px';
         this.canvas.style.height = size + 'px';
         this.canvas.width = size;
