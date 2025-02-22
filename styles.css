@@ -1,4 +1,4 @@
-  body {
+ body {
     margin: 0;
     padding: 0;
     display: flex;
@@ -12,8 +12,8 @@
 .game-container {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    max-width: 1000px;
+    gap: 10px;
+    max-width: 1200px;
     width: 100%;
     padding: 20px;
     box-sizing: border-box;
@@ -21,28 +21,36 @@
 
 .instructions {
     background-color: white;
-    padding: 15px 25px;
+    padding: 10px 20px;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     text-align: left;
 }
 
 .instructions h2 {
     color: #333;
-    margin-top: 0;
-    font-size: 1.4em;
+    margin: 0 0 10px 0;
+    font-size: 1.2em;
+}
+
+.two-columns {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
 }
 
 .instructions ul {
     list-style: none;
     padding: 0;
     margin: 0;
+    flex: 1;
 }
 
 .instructions li {
-    margin: 8px 0;
+    margin: 5px 0;
     color: #555;
+    font-size: 0.9em;
 }
 
 .instructions strong {
@@ -57,7 +65,7 @@ canvas {
     touch-action: none;
     display: block;
     margin: 0 auto;
-    max-height: 80vh;
+    max-height: 85vh;
     width: 100%;
     box-sizing: border-box;
 }
