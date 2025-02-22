@@ -32,7 +32,9 @@ class GraphGame {
     }
 
     resizeCanvas() {
-        const size = Math.min(window.innerWidth - 40, window.innerHeight - 100);
+        const size = Math.min(window.innerWidth - 40, window.innerHeight - 200);
+        this.canvas.style.width = size + 'px';
+        this.canvas.style.height = size + 'px';
         this.canvas.width = size;
         this.canvas.height = size;
         this.draw();
@@ -68,13 +70,9 @@ class GraphGame {
         const rect = this.canvas.getBoundingClientRect();
         const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
         const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-    
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-    
         return {
-            x: (clientX - rect.left) * scaleX,
-            y: (clientY - rect.top) * scaleY
+            x: clientX - rect.left,
+            y: clientY - rect.top
         };
     }
 
@@ -88,6 +86,7 @@ class GraphGame {
         }
         return null;
     }
+
 
     findEdgeAtPosition(pos) {
         for (let i = 0; i < this.edges.length; i++) {
@@ -143,7 +142,6 @@ class GraphGame {
                     // Double click - change color
                     this.nodes[nodeIndex].colorIndex = 
                         (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
-                    this.highlightedNode = null;  // Clear highlight on color change
                 } else if (this.clickCount === 3) {
                     // Triple click - delete node
                     this.deleteNode(nodeIndex);
@@ -212,7 +210,6 @@ class GraphGame {
     handleEnd(e) {
         e.preventDefault();
         if (this.isDragging && !this.clickCount) {
-            // Clear highlight only if this was a pure drag (no clicks involved)
             this.highlightedNode = null;
         }
         this.isDragging = false;
