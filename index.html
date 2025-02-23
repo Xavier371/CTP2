@@ -8,30 +8,25 @@
 </head>
 <body>
     <div class="game-container">
-        <button id="toggleInstructions">Show Instructions</button>
-        
-        <div class="instructions">
-            <h2>How to Play:</h2>
-            <div class="three-columns">
+        <button id="toggleInstructions">How to Play</button>
+
+        <div id="canvasContainer">
+            <div class="instructions-overlay">
+                <h2>How to Play:</h2>
                 <ul>
                     <li><strong>Tap space:</strong> new node</li>
                     <li><strong>Single tap:</strong> highlight</li>
-                </ul>
-                <ul>
                     <li><strong>Two taps:</strong> make edge</li>
                     <li><strong>Double tap:</strong> color</li>
                     <li><strong>Triple tap:</strong> delete</li>
-                </ul>
-                <ul>
                     <li><strong>Tap edge:</strong> delete it</li>
                     <li><strong>Drag:</strong> move nodes</li>
                 </ul>
             </div>
+            <canvas id="gameCanvas"></canvas>
         </div>
-
-        <canvas id="gameCanvas"></canvas>
     </div>
-    
+
     <script src="game.js"></script>
 </body>
 </html>
