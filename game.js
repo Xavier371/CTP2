@@ -277,18 +277,21 @@ window.onload = () => new GraphGame();
 
 // ================= START OF TOGGLE BUTTON FUNCTION ===========================
 document.addEventListener("DOMContentLoaded", function () {
-    const instructions = document.querySelector(".instructions");
+    const instructionsOverlay = document.querySelector(".instructions-overlay");
+    const gameCanvas = document.getElementById("gameCanvas");
     const toggleButton = document.getElementById("toggleInstructions");
 
     toggleButton.addEventListener("click", function () {
-        if (instructions.style.display === "none") {
-            instructions.style.display = "block";
-            toggleButton.textContent = "Hide Instructions";
+        if (instructionsOverlay.style.display === "none") {
+            // Show instructions, hide game
+            instructionsOverlay.style.display = "flex";
+            gameCanvas.style.display = "none";
+            toggleButton.textContent = "Resume Game";
         } else {
-            instructions.style.display = "none";
-            toggleButton.textContent = "Show Instructions";
+            // Show game, hide instructions
+            instructionsOverlay.style.display = "none";
+            gameCanvas.style.display = "block";
+            toggleButton.textContent = "How to Play";
         }
     });
 });
-// ================= END OF TOGGLE BUTTON FUNCTION ==============================
-
