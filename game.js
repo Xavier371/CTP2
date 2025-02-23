@@ -11,7 +11,6 @@ class GraphGame {
         this.draggedNode = null;
         this.highlightedNode = null;
         this.lastClickTime = 0;
-        this.clickCount = 0;
         this.lastClickedNode = null;
         this.lastClickedEdge = null;
         this.colors = ['#4CAF50', '#f44336', '#2196F3']; // green, red, blue
@@ -128,32 +127,16 @@ class GraphGame {
         const timeDiff = currentTime - this.lastClickTime;
 
         if (nodeIndex !== -1) {
-            // Always enable dragging on mousedown
-            this.isDragging = true;
-            this.draggedNode = nodeIndex;
-
             if (timeDiff < 300 && nodeIndex === this.lastClickedNode) {
-                // Double click handling
-                if (timeDiff < 200) {  // Stricter timing for triple click
-                    // Triple click - delete node
-                    this.nodes.splice(nodeIndex, 1);
-                    this.edges = this.edges.filter(edge => 
-                        edge.from !== nodeIndex && edge.to !== nodeIndex
-                    );
-                    this.edges.forEach(edge => {
-                        if (edge.from > nodeIndex) edge.from--;
-                        if (edge.to > nodeIndex) edge.to--;
-                    });
-                    this.highlightedNode = null;
-                    this.isDragging = false;
-                } else {
-                    // Double click - change color
-                    this.nodes[nodeIndex].colorIndex = (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
-                }
+                // Double click - change color
+                this.nodes[nodeIndex].colorIndex = (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
+                this.isDragging = false;
             } else {
-                // Single click - handle highlighting and edge creation
+                // Single click - toggle highlight or create edge
+                this.isDragging = true;
+                this.draggedNode = nodeIndex;
+                
                 if (this.highlightedNode === nodeIndex) {
-                    // Unhighlight if clicking the same node
                     this.highlightedNode = null;
                 } else if (this.highlightedNode !== null) {
                     // Create edge if there's already a highlighted node
@@ -169,7 +152,6 @@ class GraphGame {
                     }
                     this.highlightedNode = null;
                 } else {
-                    // Highlight new node
                     this.highlightedNode = nodeIndex;
                 }
             }
@@ -210,7 +192,6 @@ class GraphGame {
         if (this.isDragging) {
             this.isDragging = false;
             this.draggedNode = null;
-            // Don't reset highlight on drag end to maintain highlight state for edge creation
             this.draw();
         }
     }
@@ -241,6 +222,7 @@ class GraphGame {
             this.ctx.moveTo(startX, startY);
             this.ctx.lineTo(endX, endY);
             this.ctx.strokeStyle = '#666';
+            this.ctx.lineWidth = 2;
             this.ctx.stroke();
 
             // Draw arrow if edge is directed
@@ -273,7 +255,8 @@ class GraphGame {
             this.ctx.strokeStyle = index === this.highlightedNode ? '#000' : '#333';
             this.ctx.lineWidth = index === this.highlightedNode ? 3 : 1;
             this.ctx.stroke();
-            this.ctx.lineWidth = 1;
+            
+            // Draw node number
             this.ctx.fillStyle = 'white';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
