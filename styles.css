@@ -12,61 +12,65 @@ body {
 .game-container {
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 10px;
     max-width: 1200px;
     width: 100%;
     padding: 10px;
     box-sizing: border-box;
-    align-items: center;
 }
 
-.instructions {
-    background-color: white;
-    padding: 10px 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    text-align: left;
-    display: none; /* Hide instructions by default */
-    width: 100%;
-    max-width: 800px;
-}
-
-.instructions h2 {
-    color: #333;
-    margin: 5px 0;
-    font-size: 1em;
-    display: inline-block;
-}
-
-.three-columns {
+/* Center the grid and make it larger */
+#canvasContainer {
+    position: relative;
+    width: 90vw;
+    max-width: 900px;
+    height: 85vh;
+    max-height: 700px;
     display: flex;
-    justify-content: space-between;
-    gap: 10px;
+    align-items: center;
+    justify-content: center;
 }
 
-.instructions ul {
+/* Instructions overlay (inside grid outline) */
+.instructions-overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: white;
+    border: 2px solid #333;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: none; /* Initially hidden */
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    flex-direction: column;
+}
+
+.instructions-overlay h2 {
+    margin: 10px 0;
+    font-size: 1.2em;
+    color: #333;
+}
+
+.instructions-overlay ul {
     list-style: none;
     padding: 0;
     margin: 0;
-    flex: 1;
 }
 
-.instructions li {
-    margin: 2px 0;
+.instructions-overlay li {
+    font-size: 1em;
+    margin: 5px 0;
     color: #555;
-    font-size: 0.85em;
-    white-space: nowrap;
 }
 
-.instructions strong {
-    color: #333;
-}
-
-/* Button Styling */
+/* Button styling */
 #toggleInstructions {
     background-color: #007bff;
     color: white;
-    padding: 8px 12px;
+    padding: 10px 15px;
     font-size: 1em;
     border: none;
     border-radius: 5px;
@@ -77,16 +81,14 @@ body {
     background-color: #0056b3;
 }
 
-/* Make the canvas bigger */
+/* Canvas settings */
 canvas {
     background-color: white;
     border: 2px solid #333;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     touch-action: none;
+    width: 100%;
+    height: 100%;
     display: block;
-    margin: 0 auto;
-    width: 90vw; /* Increased width */
-    height: 85vh; /* Increased height */
-    box-sizing: border-box;
 }
