@@ -33,8 +33,8 @@ class GraphGame {
 
     resizeCanvas() {
         const size = Math.min(
-            window.innerWidth * 0.85,
-            window.innerHeight * 0.7
+            window.innerWidth * 0.75,  // Reduce width to 75% of screen width
+            window.innerHeight * 0.6   // Reduce height to 60% of screen height
         );
         
         this.canvas.style.width = size + 'px';
