@@ -281,17 +281,38 @@ document.addEventListener("DOMContentLoaded", function () {
     const gameCanvas = document.getElementById("gameCanvas");
     const toggleButton = document.getElementById("toggleInstructions");
 
+    // ✅ Get GraphGame instance to hide nodes/edges
+    let gameInstance = null;
+    window.onload = () => {
+        gameInstance = new GraphGame();
+    };
+
     toggleButton.addEventListener("click", function () {
         if (instructionsOverlay.style.display === "none") {
-            // Show instructions, hide game
+            // ✅ Show instructions, hide nodes and edges
             instructionsOverlay.style.display = "flex";
-            gameCanvas.style.display = "none";
+            gameCanvas.classList.add("hidden"); // Hide grid
             toggleButton.textContent = "Resume Game";
+            if (gameInstance) gameInstance.hideGraph();
         } else {
-            // Show game, hide instructions
+            // ✅ Hide instructions, show nodes and edges
             instructionsOverlay.style.display = "none";
-            gameCanvas.style.display = "block";
-            toggleButton.textContent = "How to Play";
+            gameCanvas.classList.remove("hidden"); // Show grid
+            toggleButton.textContent = "Instructions";
+            if (gameInstance) gameInstance.showGraph();
         }
     });
 });
+// ================= END OF TOGGLE INSTRUCTIONS FUNCTION ===========================
+
+// ✅ Inside GraphGame class, add these two functions
+GraphGame.prototype.hideGraph = function () {
+    this.nodes = []; // Temporarily clear nodes
+    this.edges = []; // Temporarily clear edges
+    this.draw(); // Redraw blank grid
+};
+
+GraphGame.prototype.showGraph = function () {
+    this.initializeRandomGraph(); // Reinitialize nodes and edges
+    this.draw();
+};
