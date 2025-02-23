@@ -11,6 +11,7 @@ class GraphGame {
         this.draggedNode = null;
         this.highlightedNode = null;
         this.lastClickTime = 0;
+        this.clickCount = 0;  // Added to track multiple clicks
         this.lastClickedNode = null;
         this.lastClickedEdge = null;
         this.colors = ['#4CAF50', '#f44336', '#2196F3']; // green, red, blue
@@ -127,12 +128,31 @@ class GraphGame {
         const timeDiff = currentTime - this.lastClickTime;
 
         if (nodeIndex !== -1) {
+            // Node interaction
             if (timeDiff < 300 && nodeIndex === this.lastClickedNode) {
-                // Double click - change color
-                this.nodes[nodeIndex].colorIndex = (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
-                this.isDragging = false;
+                this.clickCount++;
+                if (this.clickCount === 2) {
+                    // Double click - change color
+                    this.nodes[nodeIndex].colorIndex = (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
+                    this.isDragging = false;
+                } else if (this.clickCount === 3) {
+                    // Triple click - delete node
+                    this.nodes.splice(nodeIndex, 1);
+                    this.edges = this.edges.filter(edge => 
+                        edge.from !== nodeIndex && edge.to !== nodeIndex
+                    );
+                    // Update edge indices
+                    this.edges.forEach(edge => {
+                        if (edge.from > nodeIndex) edge.from--;
+                        if (edge.to > nodeIndex) edge.to--;
+                    });
+                    this.highlightedNode = null;
+                    this.isDragging = false;
+                    this.clickCount = 0;
+                }
             } else {
-                // Single click - toggle highlight or create edge
+                // Single click - toggle highlight and enable dragging
+                this.clickCount = 1;
                 this.isDragging = true;
                 this.draggedNode = nodeIndex;
                 
@@ -157,7 +177,7 @@ class GraphGame {
             }
             this.lastClickedNode = nodeIndex;
         } else {
-            // Handle edge clicks
+            // Edge or empty space interaction
             const edgeIndex = this.findEdgeAtPosition(pos);
             if (edgeIndex !== -1) {
                 if (timeDiff < 300 && edgeIndex === this.lastClickedEdge) {
@@ -169,6 +189,10 @@ class GraphGame {
                 }
                 this.lastClickedEdge = edgeIndex;
             } else {
+                // Clicked empty space - add new node
+                const x = pos.x;
+                const y = pos.y;
+                this.nodes.push({ x, y, colorIndex: 0 });
                 this.lastClickedEdge = null;
             }
         }
@@ -192,6 +216,8 @@ class GraphGame {
         if (this.isDragging) {
             this.isDragging = false;
             this.draggedNode = null;
+            this.highlightedNode = null; // Unhighlight node after dragging
+            this.clickCount = 0; // Reset click counter
             this.draw();
         }
     }
