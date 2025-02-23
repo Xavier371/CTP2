@@ -1,99 +1,34 @@
-body {
-    margin: 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background-color: #f0f0f0;
-    font-family: Arial, sans-serif;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Theory Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- ✅ Button remains in the same position -->
+        <button id="toggleInstructions">Instructions</button>
 
-.game-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    max-width: 1200px;
-    width: 100%;
-    padding: 10px;
-    box-sizing: border-box;
-}
+        <div id="canvasContainer">
+            <!-- ✅ Instructions inside grid, larger text, left-centered -->
+            <div class="instructions-overlay">
+                <h2>How to Play:</h2>
+                <ul>
+                    <li><strong>Tap space:</strong> new node</li>
+                    <li><strong>Single tap:</strong> highlight</li>
+                    <li><strong>Two taps:</strong> make edge</li>
+                    <li><strong>Double tap:</strong> color</li>
+                    <li><strong>Triple tap:</strong> delete</li>
+                    <li><strong>Tap edge:</strong> delete it</li>
+                    <li><strong>Drag:</strong> move nodes</li>
+                </ul>
+            </div>
+            <canvas id="gameCanvas"></canvas>
+        </div>
+    </div>
 
-/* ✅ Center and enlarge the grid */
-#canvasContainer {
-    position: relative;
-    width: 90vw;
-    max-width: 900px;
-    height: 85vh;
-    max-height: 700px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* ✅ Hide instructions by default */
-.instructions-overlay {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background-color: white;
-    border: 2px solid #333;
-    border-radius: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    display: none; /* ✅ Initially hidden */
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    flex-direction: column;
-}
-
-.instructions-overlay h2 {
-    margin: 10px 0;
-    font-size: 1.2em;
-    color: #333;
-}
-
-.instructions-overlay ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.instructions-overlay li {
-    font-size: 1em;
-    margin: 5px 0;
-    color: #555;
-}
-
-/* ✅ Button styling */
-#toggleInstructions {
-    background-color: #007bff;
-    color: white;
-    padding: 10px 15px;
-    font-size: 1em;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-#toggleInstructions:hover {
-    background-color: #0056b3;
-}
-
-/* ✅ Hide nodes and edges when instructions are active */
-.hidden {
-    display: none;
-}
-
-/* ✅ Enlarged Canvas */
-canvas {
-    background-color: white;
-    border: 2px solid #333;
-    border-radius: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    touch-action: none;
-    width: 100%;
-    height: 100%;
-    display: block;
-}
+    <script src="game.js"></script>
+</body>
+</html>
