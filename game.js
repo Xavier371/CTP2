@@ -274,3 +274,21 @@ class GraphGame {
 
 // Initialize the game when the page loads
 window.onload = () => new GraphGame();
+
+// ================= START OF TOGGLE BUTTON FUNCTION ===========================
+document.addEventListener("DOMContentLoaded", function () {
+    const instructions = document.querySelector(".instructions");
+    const toggleButton = document.getElementById("toggleInstructions");
+
+    toggleButton.addEventListener("click", function () {
+        if (instructions.style.display === "none") {
+            instructions.style.display = "block";
+            toggleButton.textContent = "Hide Instructions";
+        } else {
+            instructions.style.display = "none";
+            toggleButton.textContent = "Show Instructions";
+        }
+    });
+});
+// ================= END OF TOGGLE BUTTON FUNCTION ==============================
+
