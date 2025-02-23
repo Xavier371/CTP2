@@ -20,7 +20,7 @@ body {
     box-sizing: border-box;
 }
 
-/* Center the grid and make it larger */
+/* ✅ Center and enlarge the grid */
 #canvasContainer {
     position: relative;
     width: 90vw;
@@ -32,7 +32,7 @@ body {
     justify-content: center;
 }
 
-/* Instructions overlay (inside grid outline) */
+/* ✅ Hide instructions by default */
 .instructions-overlay {
     position: absolute;
     width: 100%;
@@ -41,7 +41,7 @@ body {
     border: 2px solid #333;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    display: none; /* Initially hidden */
+    display: none; /* ✅ Initially hidden */
     justify-content: center;
     align-items: center;
     text-align: center;
@@ -66,7 +66,7 @@ body {
     color: #555;
 }
 
-/* Button styling */
+/* ✅ Button styling */
 #toggleInstructions {
     background-color: #007bff;
     color: white;
@@ -81,7 +81,12 @@ body {
     background-color: #0056b3;
 }
 
-/* Canvas settings */
+/* ✅ Hide nodes and edges when instructions are active */
+.hidden {
+    display: none;
+}
+
+/* ✅ Enlarged Canvas */
 canvas {
     background-color: white;
     border: 2px solid #333;
