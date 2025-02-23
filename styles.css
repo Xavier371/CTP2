@@ -38,13 +38,14 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     display: none;
     justify-content: flex-start;
-    align-items: flex-start;
+    align-items: center;
     padding: 30px;
+    flex-direction: column;
 }
 
 .instructions-overlay h2 {
-    margin-top: 30px;  /* Add space above the title */
-    margin-bottom: 40px;  /* Add more space between title and list */
+    margin-top: 30px;
+    margin-bottom: 40px;
     font-size: 1.5em;
     color: #333;
 }
@@ -54,10 +55,11 @@ body {
     padding: 0;
     margin: 0;
 }
+
 .instructions-overlay li {
-    font-size: 18px;
-    margin: 15px 0;
-    color: #555;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    color: #444;
 }
 
 #toggleInstructions {
