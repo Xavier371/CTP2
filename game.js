@@ -13,6 +13,7 @@ class GraphGame {
         this.lastClickTime = 0;
         this.clickCount = 0;
         this.lastClickedNode = null;
+        this.lastClickedEdge = null;
         this.colors = ['#4CAF50', '#f44336', '#2196F3']; // green, red, blue
         
         // Initialize game
@@ -27,7 +28,7 @@ class GraphGame {
         this.canvas.addEventListener('touchstart', (e) => this.handleStart(e));
         this.canvas.addEventListener('touchmove', (e) => this.handleMove(e));
         this.canvas.addEventListener('touchend', (e) => this.handleEnd(e));
-        document.addEventListener('keydown', (e) => this.handleKeyPress(e));
+        window.addEventListener('keydown', (e) => this.handleKeyPress(e));
     }
 
     resizeCanvas() {
@@ -55,14 +56,15 @@ class GraphGame {
             if (!this.edges.some(edge => 
                 (edge.from === from && edge.to === to) ||
                 (edge.from === to && edge.to === from))) {
-                this.edges.push({ from, to });
+                this.edges.push({ from, to, directed: false });
             }
         }
         this.draw();
     }
 
     handleKeyPress(e) {
-        if (e.code === 'Space') {
+        if (e.code === 'Space' || e.key === ' ') {
+            e.preventDefault();
             const x = this.nodeRadius + Math.random() * (this.canvas.width - 2 * this.nodeRadius);
             const y = this.nodeRadius + Math.random() * (this.canvas.height - 2 * this.nodeRadius);
             this.nodes.push({ x, y, colorIndex: 0 });
@@ -110,7 +112,7 @@ class GraphGame {
     }
 
     isPointBetweenEndpoints(point, lineStart, lineEnd) {
-        const buffer = 20; // Allow some padding around the line endpoints
+        const buffer = 20;
         const minX = Math.min(lineStart.x, lineEnd.x) - buffer;
         const maxX = Math.max(lineStart.x, lineEnd.x) + buffer;
         const minY = Math.min(lineStart.y, lineEnd.y) - buffer;
@@ -122,11 +124,10 @@ class GraphGame {
         e.preventDefault();
         const pos = this.getMousePos(e);
         const nodeIndex = this.findNodeAtPosition(pos);
+        const currentTime = Date.now();
 
         if (nodeIndex !== -1) {
-            const currentTime = Date.now();
-            if (currentTime - this.lastClickTime < 300) {
-                // Handle multiple clicks
+            if (currentTime - this.lastClickTime < 300 && nodeIndex === this.lastClickedNode) {
                 this.clickCount++;
                 if (this.clickCount === 2) {
                     // Double click - change color
@@ -141,38 +142,62 @@ class GraphGame {
                         if (edge.from > nodeIndex) edge.from--;
                         if (edge.to > nodeIndex) edge.to--;
                     });
+                    this.highlightedNode = null;
+                    this.lastClickedNode = null;
                 }
             } else {
-                // Single click - start drag or highlight
                 this.clickCount = 1;
                 this.isDragging = true;
                 this.draggedNode = nodeIndex;
-                this.highlightedNode = nodeIndex;
-                if (this.lastClickedNode !== null && this.lastClickedNode !== nodeIndex) {
-                    // Create edge between two nodes
-                    if (!this.edges.some(edge => 
-                        (edge.from === this.lastClickedNode && edge.to === nodeIndex) ||
-                        (edge.from === nodeIndex && edge.to === this.lastClickedNode)
-                    )) {
-                        this.edges.push({
-                            from: this.lastClickedNode,
-                            to: nodeIndex
-                        });
-                    }
+
+                if (this.highlightedNode === nodeIndex) {
+                    this.highlightedNode = null;
                     this.lastClickedNode = null;
                 } else {
-                    this.lastClickedNode = nodeIndex;
+                    this.highlightedNode = nodeIndex;
+                    
+                    if (this.lastClickedNode !== null && this.lastClickedNode !== nodeIndex) {
+                        if (!this.edges.some(edge => 
+                            (edge.from === this.lastClickedNode && edge.to === nodeIndex) ||
+                            (edge.from === nodeIndex && edge.to === this.lastClickedNode)
+                        )) {
+                            this.edges.push({
+                                from: this.lastClickedNode,
+                                to: nodeIndex,
+                                directed: false
+                            });
+                        }
+                        this.highlightedNode = null;
+                        this.lastClickedNode = null;
+                    } else {
+                        this.lastClickedNode = nodeIndex;
+                    }
                 }
             }
-            this.lastClickTime = currentTime;
         } else {
-            // Check for edge click
             const edgeIndex = this.findEdgeAtPosition(pos);
             if (edgeIndex !== -1) {
-                this.edges.splice(edgeIndex, 1);
+                if (currentTime - this.lastClickTime < 300 && edgeIndex === this.lastClickedEdge) {
+                    // Double click on edge - rotate direction
+                    if (!this.edges[edgeIndex].directed) {
+                        this.edges[edgeIndex].directed = 'forward';
+                    } else if (this.edges[edgeIndex].directed === 'forward') {
+                        this.edges[edgeIndex].directed = 'backward';
+                    } else {
+                        this.edges[edgeIndex].directed = false;
+                    }
+                } else {
+                    // Single click on edge - delete
+                    this.edges.splice(edgeIndex, 1);
+                }
+                this.lastClickedEdge = edgeIndex;
+            } else {
+                this.lastClickedEdge = null;
             }
+            this.highlightedNode = null;
             this.lastClickedNode = null;
         }
+        this.lastClickTime = currentTime;
         this.draw();
     }
 
@@ -191,7 +216,9 @@ class GraphGame {
         if (this.isDragging) {
             this.isDragging = false;
             this.draggedNode = null;
-            this.highlightedNode = null;  // Remove highlight after dragging
+            if (!this.lastClickedNode) {
+                this.highlightedNode = null;
+            }
             this.draw();
         }
     }
@@ -203,11 +230,58 @@ class GraphGame {
         this.edges.forEach(edge => {
             const fromNode = this.nodes[edge.from];
             const toNode = this.nodes[edge.to];
+            
+            // Calculate the direction vector
+            const dx = toNode.x - fromNode.x;
+            const dy = toNode.y - fromNode.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const unitX = dx / length;
+            const unitY = dy / length;
+
+            // Calculate start and end points accounting for node radius
+            const startX = fromNode.x + unitX * this.nodeRadius;
+            const startY = fromNode.y + unitY * this.nodeRadius;
+            const endX = toNode.x - unitX * this.nodeRadius;
+            const endY = toNode.y - unitY * this.nodeRadius;
+
+            // Draw the main line
             this.ctx.beginPath();
-            this.ctx.moveTo(fromNode.x, fromNode.y);
-            this.ctx.lineTo(toNode.x, toNode.y);
+            this.ctx.moveTo(startX, startY);
+            this.ctx.lineTo(endX, endY);
             this.ctx.strokeStyle = '#666';
             this.ctx.stroke();
+
+            // Draw arrow if edge is directed
+            if (edge.directed) {
+                const arrowLength = 15;
+                const arrowWidth = 8;
+                
+                // Determine which direction to draw the arrow
+                let arrowEndX, arrowEndY, arrowStartX, arrowStartY;
+                if (edge.directed === 'forward') {
+                    arrowEndX = endX;
+                    arrowEndY = endY;
+                    arrowStartX = endX - unitX * arrowLength;
+                    arrowStartY = endY - unitY * arrowLength;
+                } else if (edge.directed === 'backward') {
+                    arrowEndX = startX;
+                    arrowEndY = startY;
+                    arrowStartX = startX + unitX * arrowLength;
+                    arrowStartY = startY + unitY * arrowLength;
+                }
+
+                // Draw the arrowhead
+                const perpX = -unitY * arrowWidth;
+                const perpY = unitX * arrowWidth;
+
+                this.ctx.beginPath();
+                this.ctx.moveTo(arrowEndX, arrowEndY);
+                this.ctx.lineTo(arrowStartX + perpX, arrowStartY + perpY);
+                this.ctx.lineTo(arrowStartX - perpX, arrowStartY - perpY);
+                this.ctx.closePath();
+                this.ctx.fillStyle = '#666';
+                this.ctx.fill();
+            }
         });
 
         // Draw nodes
