@@ -119,7 +119,7 @@ class GraphGame {
         return point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY;
     }
 
-        handleStart(e) {
+           handleStart(e) {
         e.preventDefault();
         const pos = this.getMousePos(e);
         const nodeIndex = this.findNodeAtPosition(pos);
@@ -127,12 +127,13 @@ class GraphGame {
         const timeDiff = currentTime - this.lastClickTime;
 
         if (nodeIndex !== -1) {
-            if (timeDiff < 300 && nodeIndex === this.lastClickedNode) {
-                // Double click - change color
-                this.nodes[nodeIndex].colorIndex = (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
-                this.isDragging = false;
-                
-                if (this.clickCount === 1) {
+            // Node clicked
+            if (nodeIndex === this.lastClickedNode && timeDiff < 300) {
+                // Double/Triple click handling
+                if (this.clickCount === 0) {
+                    // Double click - change color
+                    this.nodes[nodeIndex].colorIndex = (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
+                } else if (this.clickCount === 1) {
                     // Triple click - delete node
                     this.nodes.splice(nodeIndex, 1);
                     this.edges = this.edges.filter(edge => 
@@ -143,40 +144,34 @@ class GraphGame {
                         if (edge.to > nodeIndex) edge.to--;
                     });
                     this.highlightedNode = null;
-                    this.isDragging = false;
                 }
                 this.clickCount++;
+                this.isDragging = false;
             } else {
-                // Single click - handle highlighting and dragging
+                // Single click or first click
                 this.clickCount = 0;
                 this.isDragging = true;
                 this.draggedNode = nodeIndex;
 
-                // Handle highlighting and edge creation
-                if (this.highlightedNode === null) {
-                    // No node is highlighted, highlight this one
-                    this.highlightedNode = nodeIndex;
-                } else if (this.highlightedNode === nodeIndex) {
-                    // Clicking the highlighted node, unhighlight it
+                // Simple highlight toggle if it's the same node
+                if (nodeIndex === this.highlightedNode) {
+                    this.highlightedNode = null;
+                } else if (this.highlightedNode !== null) {
+                    // Create edge if there's already a highlighted node
+                    this.edges.push({
+                        from: this.highlightedNode,
+                        to: nodeIndex,
+                        directed: false
+                    });
                     this.highlightedNode = null;
                 } else {
-                    // A different node is highlighted, create an edge
-                    if (!this.edges.some(edge => 
-                        (edge.from === this.highlightedNode && edge.to === nodeIndex) ||
-                        (edge.from === nodeIndex && edge.to === this.highlightedNode)
-                    )) {
-                        this.edges.push({
-                            from: this.highlightedNode,
-                            to: nodeIndex,
-                            directed: false
-                        });
-                    }
-                    this.highlightedNode = null;
+                    // Highlight the clicked node
+                    this.highlightedNode = nodeIndex;
                 }
             }
             this.lastClickedNode = nodeIndex;
         } else {
-            // Handle edge or empty space clicks
+            // Edge or empty space clicked
             const edgeIndex = this.findEdgeAtPosition(pos);
             if (edgeIndex !== -1) {
                 if (timeDiff < 300 && edgeIndex === this.lastClickedEdge) {
