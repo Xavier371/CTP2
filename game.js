@@ -119,7 +119,7 @@ class GraphGame {
         return point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY;
     }
 
-           handleStart(e) {
+    handleStart(e) {
         e.preventDefault();
         const pos = this.getMousePos(e);
         const nodeIndex = this.findNodeAtPosition(pos);
@@ -130,10 +130,12 @@ class GraphGame {
             // Node clicked
             if (nodeIndex === this.lastClickedNode && timeDiff < 300) {
                 // Double/Triple click handling
-                if (this.clickCount === 0) {
+                this.clickCount++;
+                if (this.clickCount === 2) {
                     // Double click - change color
                     this.nodes[nodeIndex].colorIndex = (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
-                } else if (this.clickCount === 1) {
+                    this.isDragging = false;
+                } else if (this.clickCount === 3) {
                     // Triple click - delete node
                     this.nodes.splice(nodeIndex, 1);
                     this.edges = this.edges.filter(edge => 
@@ -144,28 +146,34 @@ class GraphGame {
                         if (edge.to > nodeIndex) edge.to--;
                     });
                     this.highlightedNode = null;
+                    this.isDragging = false;
+                    this.clickCount = 0;
                 }
-                this.clickCount++;
-                this.isDragging = false;
             } else {
-                // Single click or first click
-                this.clickCount = 0;
+                // Single click or first click on new node
+                this.clickCount = 1;
                 this.isDragging = true;
                 this.draggedNode = nodeIndex;
 
-                // Simple highlight toggle if it's the same node
-                if (nodeIndex === this.highlightedNode) {
+                // Handle highlighting and edge creation
+                if (this.highlightedNode === nodeIndex) {
+                    // Clicking already highlighted node - unhighlight it
                     this.highlightedNode = null;
                 } else if (this.highlightedNode !== null) {
-                    // Create edge if there's already a highlighted node
-                    this.edges.push({
-                        from: this.highlightedNode,
-                        to: nodeIndex,
-                        directed: false
-                    });
+                    // Already have a highlighted node - create edge
+                    if (!this.edges.some(edge => 
+                        (edge.from === this.highlightedNode && edge.to === nodeIndex) ||
+                        (edge.from === nodeIndex && edge.to === this.highlightedNode)
+                    )) {
+                        this.edges.push({
+                            from: this.highlightedNode,
+                            to: nodeIndex,
+                            directed: false
+                        });
+                    }
                     this.highlightedNode = null;
                 } else {
-                    // Highlight the clicked node
+                    // No highlighted node - highlight this one
                     this.highlightedNode = nodeIndex;
                 }
             }
