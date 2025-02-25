@@ -119,7 +119,7 @@ class GraphGame {
         return point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY;
     }
 
-    handleStart(e) {
+        handleStart(e) {
         e.preventDefault();
         const pos = this.getMousePos(e);
         const nodeIndex = this.findNodeAtPosition(pos);
@@ -128,13 +128,13 @@ class GraphGame {
 
         if (nodeIndex !== -1) {
             // Node clicked
-            if (nodeIndex === this.lastClickedNode && timeDiff < 300) {
-                // Double/Triple click handling
+            if (this.lastClickedNode === nodeIndex && timeDiff < 300) {
+                // Multiple clicks on same node
                 this.clickCount++;
+                
                 if (this.clickCount === 2) {
                     // Double click - change color
                     this.nodes[nodeIndex].colorIndex = (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
-                    this.isDragging = false;
                 } else if (this.clickCount === 3) {
                     // Triple click - delete node
                     this.nodes.splice(nodeIndex, 1);
@@ -146,21 +146,17 @@ class GraphGame {
                         if (edge.to > nodeIndex) edge.to--;
                     });
                     this.highlightedNode = null;
-                    this.isDragging = false;
-                    this.clickCount = 0;
                 }
             } else {
-                // Single click or first click on new node
+                // First click on a node
                 this.clickCount = 1;
-                this.isDragging = true;
-                this.draggedNode = nodeIndex;
-
+                
                 // Handle highlighting and edge creation
                 if (this.highlightedNode === nodeIndex) {
-                    // Clicking already highlighted node - unhighlight it
+                    // Clicking the already highlighted node - unhighlight it
                     this.highlightedNode = null;
                 } else if (this.highlightedNode !== null) {
-                    // Already have a highlighted node - create edge
+                    // Create edge between highlighted node and current node
                     if (!this.edges.some(edge => 
                         (edge.from === this.highlightedNode && edge.to === nodeIndex) ||
                         (edge.from === nodeIndex && edge.to === this.highlightedNode)
@@ -173,10 +169,14 @@ class GraphGame {
                     }
                     this.highlightedNode = null;
                 } else {
-                    // No highlighted node - highlight this one
+                    // Highlight the clicked node
                     this.highlightedNode = nodeIndex;
                 }
             }
+
+            // Set up for potential dragging
+            this.isDragging = true;
+            this.draggedNode = nodeIndex;
             this.lastClickedNode = nodeIndex;
         } else {
             // Edge or empty space clicked
