@@ -1,29 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graph Theory Game</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Graph The Match!</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" type="text/css" href="styles.css">
 </head>
 <body>
-    <div class="game-container">
+    <div class="controls">
         <button id="toggleInstructions">Instructions</button>
-        <div id="canvasContainer">
-            <div class="instructions-overlay">
-                <h2>How to Play:</h2>
+        <button id="resetGraph">Reset</button>
+        <button id="checkMatching">Check</button>
+        <label>Set A Size: <input type="number" id="setASize" min="2" max="4" value="2"></label>
+        <label>Set B Size: <input type="number" id="setBSize" min="2" max="5" value="3"></label>
+    </div>
+
+    <div class="score-display">
+        <div class="score-item">
+            Current Score: <span id="currentScore">0.00</span>
+        </div>
+        <div class="score-item">
+            Max Score: <span id="maxScore">?</span>
+        </div>
+    </div>
+    <div id="winMessage" style="display: none;"></div>
+
+    <div id="canvasContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div class="instructions-overlay">
+            <div class="instructions-content">
+                <p>Welcome to Match The Graph, your goal is to select the set of disjoint edges (two edges cant share the same vertex) that maximizes the sum of weights</p>
+                <h2>Intuition</h2>
                 <ul>
-                    <li><strong>Tap space:</strong> new node</li>
-                    <li><strong>Single tap:</strong> highlight</li>
-                    <li><strong>Tap two nodes:</strong> make edge</li>
-                    <li><strong>Double tap:</strong> color</li>
-                    <li><strong>Triple tap:</strong> delete</li>
-                    <li><strong>Tap edge:</strong> delete it</li>
-                    <li><strong>Drag:</strong> move nodes</li>
-                    <li><strong>Double tap edge:</strong> rotate direction</li>
+                    <li>Set A (red) is job applicants, Set B (blue) is companies. The edge weights (between [-1, 1]) represent how suitable a person is for the job they applied to</li>
+                    <li>Red and and blue are two groups of people. The weight on each edge represents the compatibility score between each person of the other group</li>
+                    <li>Set A is people calling an Uber, and B is Uber drivers. The edge weight represents how convenient it is for the driver to pick up the passenger</li>
                 </ul>
+                <h2>Instructions</h2>
+                <ul>
+                    <li>Click and drag nodes to move them around</li>
+                    <li>Click on edges weights (the numbers) to select/unselect them in the matching</li>
+                    <li>Use the Check button to verify if your matching is optimal</li>
+                    <li>Use Reset to start over with new random weights</li>
+                    <li>Change the number of points in each set on the top right</li>
+                </ul>
+                <button id="closeInstructions" class="close-button">Close</button>
             </div>
-            <canvas id="gameCanvas"></canvas>
         </div>
     </div>
     <script src="game.js"></script>
