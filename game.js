@@ -1,34 +1,84 @@
-class GraphGame {
-    constructor() {
-        this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
-        this.nodes = [];
-        this.edges = [];
-        this.nodeRadius = 20;
-        
-        // Interaction states
-        this.isDragging = false;
-        this.draggedNode = null;
-        this.highlightedNode = null;
-        this.lastClickTime = 0;
-        this.lastClickedNode = null;
-        this.lastClickedEdge = null;
-        this.colors = ['#4CAF50', '#f44336', '#2196F3']; // green, red, blue
-        
-        // Initialize game
-        this.resizeCanvas();
-        this.initializeRandomGraph();
-        
-        // Event listeners
-        window.addEventListener('resize', () => this.resizeCanvas());
-        this.canvas.addEventListener('mousedown', (e) => this.handleStart(e));
-        this.canvas.addEventListener('mousemove', (e) => this.handleMove(e));
-        this.canvas.addEventListener('mouseup', (e) => this.handleEnd(e));
-        this.canvas.addEventListener('touchstart', (e) => this.handleStart(e));
-        this.canvas.addEventListener('touchmove', (e) => this.handleMove(e));
-        this.canvas.addEventListener('touchend', (e) => this.handleEnd(e));
-        window.addEventListener('keydown', (e) => this.handleKeyPress(e));
-    }
+class BipartiteMatchingGame {
+   constructor() {
+       this.canvas = document.getElementById('gameCanvas');
+       this.ctx = this.canvas.getContext('2d');
+       
+       // Game state
+       this.setASize = 2;
+       this.setBSize = 3;
+       this.nodeRadius = 20;
+       this.nodes = { A: [], B: [] };
+       this.edges = [];
+       this.highlightedEdges = new Set();
+       
+       // Interaction states
+       this.isDragging = false;
+       this.draggedNode = null;
+       this.isEditingWeight = false;
+       this.editingEdge = null;
+       this.lastTap = 0;
+       this.lastEdgeClicked = null;
+       
+       // Add mobile detection
+       this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+       
+       // Adjust node radius for mobile
+       if (this.isMobile) {
+           this.nodeRadius = 15; // Smaller nodes on mobile
+       }
+       
+       // Initialize game
+       this.resizeCanvas();
+       this.initializeGraph();
+       
+       // Create max score display
+       const scoreDisplay = document.querySelector('.score-display');
+       if (!document.getElementById('maxScore')) {
+           const maxScoreDiv = document.createElement('div');
+           maxScoreDiv.innerHTML = `Max Score: <span id="maxScore">?</span>`;
+           scoreDisplay.appendChild(maxScoreDiv);
+       }
+       
+       // Create win message element
+       if (!document.getElementById('winMessage')) {
+           const winMessageDiv = document.createElement('div');
+           winMessageDiv.id = 'winMessage';
+           winMessageDiv.style.display = 'none';
+           scoreDisplay.appendChild(winMessageDiv);
+       }
+       
+       // Event listeners
+       window.addEventListener('resize', () => this.resizeCanvas());
+       
+       // Mouse events
+       this.canvas.addEventListener('mousedown', (e) => this.handleStart(e));
+       this.canvas.addEventListener('mousemove', (e) => this.handleMove(e));
+       this.canvas.addEventListener('mouseup', (e) => this.handleEnd(e));
+       
+       // Touch events
+       this.canvas.addEventListener('touchstart', (e) => this.handleStart(e));
+       this.canvas.addEventListener('touchmove', (e) => this.handleMove(e));
+       this.canvas.addEventListener('touchend', (e) => this.handleEnd(e));
+       this.canvas.addEventListener('touchcancel', (e) => this.handleEnd(e));
+       
+       // Global click/touch handler
+       document.addEventListener('click', (e) => this.handleGlobalClick(e));
+       document.addEventListener('touchend', (e) => this.handleGlobalClick(e));
+       
+       // Button handlers
+       document.getElementById('toggleInstructions').addEventListener('click', () => this.toggleInstructions());
+       document.getElementById('resetGraph').addEventListener('click', () => this.resetGraph());
+       document.getElementById('checkMatching').addEventListener('click', () => this.checkMatching());
+       document.getElementById('closeInstructions').addEventListener('click', () => {
+           document.querySelector('.instructions-overlay').style.display = 'none';
+           document.getElementById('gameCanvas').classList.remove('hidden');
+           document.getElementById('toggleInstructions').textContent = 'Instructions';
+       });
+       
+       // Size input handlers
+       document.getElementById('setASize').addEventListener('change', (e) => this.handleSizeChange('A', e));
+       document.getElementById('setBSize').addEventListener('change', (e) => this.handleSizeChange('B', e));
+   }
 
     resizeCanvas() {
         const container = document.getElementById('canvasContainer');
@@ -36,190 +86,618 @@ class GraphGame {
         this.canvas.height = container.offsetHeight;
         this.draw();
     }
+   
+     initializeGraph() {
+       const oldNodes = this.nodes;
+       const oldEdges = this.edges;
+       
+       // Initialize new arrays while preserving existing nodes
+       this.nodes = { 
+           A: oldNodes ? [...oldNodes.A] : [], 
+           B: oldNodes ? [...oldNodes.B] : [] 
+       };
+       this.edges = oldEdges ? [...oldEdges] : [];
+       
+       // Adjust set A (preserve existing nodes)
+       const ySpacingA = this.canvas.height / (this.setASize + 1);
+       if (this.nodes.A.length > this.setASize) {
+           // Remove excess nodes and their edges
+           const removedCount = this.nodes.A.length - this.setASize;
+           this.nodes.A.splice(this.setASize);
+           this.edges.splice(this.setASize * this.setBSize);
+       } else if (this.nodes.A.length < this.setASize) {
+           // Add new nodes and edges
+           for (let i = this.nodes.A.length; i < this.setASize; i++) {
+               // Add new node
+               this.nodes.A.push({
+                   x: this.canvas.width * 0.25,
+                   y: ySpacingA * (i + 1),
+                   label: `A${i + 1}`,
+                   set: 'A'
+               });
+               
+               // Add edges from this new node to all B nodes
+               for (let j = 0; j < this.setBSize; j++) {
+                   this.edges.push({
+                       from: { set: 'A', index: i },
+                       to: { set: 'B', index: j },
+                       weight1: this.generateWeight() / 2,
+                       weight2: this.generateWeight() / 2,
+                       highlighted: false
+                   });
+               }
+           }
+       }
+       
+       // Adjust set B (preserve existing nodes)
+       const ySpacingB = this.canvas.height / (this.setBSize + 1);
+       if (this.nodes.B.length > this.setBSize) {
+           // Remove excess nodes and their connected edges
+           this.nodes.B.splice(this.setBSize);
+           // Remove edges connected to removed B nodes
+           this.edges = this.edges.filter(edge => edge.to.index < this.setBSize);
+       } else if (this.nodes.B.length < this.setBSize) {
+           // Add new nodes and edges
+           for (let j = this.nodes.B.length; j < this.setBSize; j++) {
+               // Add new node
+               this.nodes.B.push({
+                   x: this.canvas.width * 0.75,
+                   y: ySpacingB * (j + 1),
+                   label: `B${j + 1}`,
+                   set: 'B'
+               });
+               
+               // Add edges from all A nodes to this new node
+               for (let i = 0; i < this.setASize; i++) {
+                   // Check if edge already exists
+                   const existingEdge = this.edges.find(e => 
+                       e.from.index === i && e.to.index === j);
+                   
+                   if (!existingEdge) {
+                       this.edges.push({
+                           from: { set: 'A', index: i },
+                           to: { set: 'B', index: j },
+                           weight1: this.generateWeight() / 2,
+                           weight2: this.generateWeight() / 2,
+                           highlighted: false
+                       });
+                   }
+               }
+           }
+       }
+       
+       // Reposition existing nodes with new spacing
+       this.nodes.A.forEach((node, i) => {
+           node.y = ySpacingA * (i + 1);
+       });
+       this.nodes.B.forEach((node, i) => {
+           node.y = ySpacingB * (i + 1);
+       });
+       
+       // Clear highlighted edges that might be invalid now
+       this.highlightedEdges = new Set(
+           Array.from(this.highlightedEdges).filter(edgeIndex => {
+               const edge = this.edges[edgeIndex];
+               return edge && 
+                      edge.from.index < this.setASize && 
+                      edge.to.index < this.setBSize;
+           })
+       );
+       
+       this.updateScore();
+       this.draw();
+   }
 
-    initializeRandomGraph() {
-        const nodeCount = Math.floor(Math.random() * 3) + 3;
-        for (let i = 0; i < nodeCount; i++) {
-            const x = this.nodeRadius + Math.random() * (this.canvas.width - 2 * this.nodeRadius);
-            const y = this.nodeRadius + Math.random() * (this.canvas.height - 2 * this.nodeRadius);
-            this.nodes.push({ x, y, colorIndex: 0 });
-        }
-
-        const edgeCount = Math.floor(Math.random() * (nodeCount * 2)) + 1;
-        for (let i = 0; i < edgeCount; i++) {
-            const from = Math.floor(Math.random() * nodeCount);
-            let to = Math.floor(Math.random() * nodeCount);
-            while (to === from) {
-                to = Math.floor(Math.random() * nodeCount);
-            }
-            if (!this.edges.some(edge => 
-                (edge.from === from && edge.to === to) ||
-                (edge.from === to && edge.to === from))) {
-                this.edges.push({ from, to, directed: false });
-            }
-        }
-        this.draw();
+    generateWeight() {
+    if (Math.random() < 0.375) {
+        // 37.5% chance of weight being close to 0
+        return Number((Math.random() * 0.2 - 0.1).toFixed(2));
     }
+    // Generate weight between -0.9 and 0.9 to avoid rounding issues
+    return Number((Math.random() * 1.8 - 0.9).toFixed(2));
+}
 
-    handleKeyPress(e) {
-        if (e.code === 'Space' || e.key === ' ') {
-            e.preventDefault();
-            const x = this.nodeRadius + Math.random() * (this.canvas.width - 2 * this.nodeRadius);
-            const y = this.nodeRadius + Math.random() * (this.canvas.height - 2 * this.nodeRadius);
-            this.nodes.push({ x, y, colorIndex: 0 });
-            this.draw();
-        }
-    }
-
-    getMousePos(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-        return {
-            x: clientX - rect.left,
-            y: clientY - rect.top
-        };
-    }
-
+    getEventPosition(e) {
+       const rect = this.canvas.getBoundingClientRect();
+       let clientX, clientY;
+       
+       if (e.touches && e.touches.length > 0) {
+           clientX = e.touches[0].clientX;
+           clientY = e.touches[0].clientY;
+       } else {
+           clientX = e.clientX;
+           clientY = e.clientY;
+       }
+       
+       return {
+           x: (clientX - rect.left) * (this.canvas.width / rect.width),
+           y: (clientY - rect.top) * (this.canvas.height / rect.height)
+       };
+   }
+   findClickedEdgeWeight(pos) {
+       for (let i = 0; i < this.edges.length; i++) {
+           const edge = this.edges[i];
+           const fromNode = this.nodes[edge.from.set][edge.from.index];
+           const toNode = this.nodes[edge.to.set][edge.to.index];
+           
+           // Calculate midpoint of the edge
+           const midX = (fromNode.x + toNode.x) / 2;
+           const midY = (fromNode.y + toNode.y) / 2;
+           
+           // Check if click is near the midpoint (weight location)
+           const dx = pos.x - midX;
+           const dy = pos.y - midY;
+           const distance = Math.sqrt(dx * dx + dy * dy);
+           
+           if (distance < 20) { // Adjust this value to change click sensitivity
+               return i;
+           }
+       }
+       return null;
+   }
+   findClickedNode(pos) {
+       // Check set A nodes
+       for (let i = 0; i < this.nodes.A.length; i++) {
+           const node = this.nodes.A[i];
+           const dx = node.x - pos.x;
+           const dy = node.y - pos.y;
+           if (dx * dx + dy * dy <= this.nodeRadius * this.nodeRadius) {
+               return node;
+           }
+       }
+       
+       // Check set B nodes
+       for (let i = 0; i < this.nodes.B.length; i++) {
+           const node = this.nodes.B[i];
+           const dx = node.x - pos.x;
+           const dy = node.y - pos.y;
+           if (dx * dx + dy * dy <= this.nodeRadius * this.nodeRadius) {
+               return node;
+           }
+       }
+       
+       return null;
+   }
     findNodeAtPosition(pos) {
-        return this.nodes.findIndex(node => 
-            Math.hypot(node.x - pos.x, node.y - pos.y) < this.nodeRadius
-        );
+        for (let i = 0; i < this.nodes.A.length; i++) {
+            const node = this.nodes.A[i];
+            if (Math.hypot(node.x - pos.x, node.y - pos.y) < this.nodeRadius) {
+                return { set: 'A', index: i };
+            }
+        }
+        for (let i = 0; i < this.nodes.B.length; i++) {
+            const node = this.nodes.B[i];
+            if (Math.hypot(node.x - pos.x, node.y - pos.y) < this.nodeRadius) {
+                return { set: 'B', index: i };
+            }
+        }
+        return null;
     }
 
     findEdgeAtPosition(pos) {
-        return this.edges.findIndex(edge => {
-            const from = this.nodes[edge.from];
-            const to = this.nodes[edge.to];
-            const distance = this.pointToLineDistance(pos, from, to);
-            return distance < 10 && this.isPointBetweenEndpoints(pos, from, to);
-        });
-    }
-
-    pointToLineDistance(point, lineStart, lineEnd) {
-        const numerator = Math.abs(
-            (lineEnd.y - lineStart.y) * point.x -
-            (lineEnd.x - lineStart.x) * point.y +
-            lineEnd.x * lineStart.y -
-            lineEnd.y * lineStart.x
-        );
-        const denominator = Math.hypot(
-            lineEnd.y - lineStart.y,
-            lineEnd.x - lineStart.x
-        );
-        return numerator / denominator;
-    }
-
-    isPointBetweenEndpoints(point, lineStart, lineEnd) {
-        const buffer = 20;
-        const minX = Math.min(lineStart.x, lineEnd.x) - buffer;
-        const maxX = Math.max(lineStart.x, lineEnd.x) + buffer;
-        const minY = Math.min(lineStart.y, lineEnd.y) - buffer;
-        const maxY = Math.max(lineStart.y, lineEnd.y) + buffer;
-        return point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY;
-    }
-
-        handleStart(e) {
-        e.preventDefault();
-        const pos = this.getMousePos(e);
-        const nodeIndex = this.findNodeAtPosition(pos);
-        const currentTime = Date.now();
-        const timeDiff = currentTime - this.lastClickTime;
-
-        if (nodeIndex !== -1) {
-            // Node clicked
-            if (this.lastClickedNode === nodeIndex && timeDiff < 300) {
-                // Multiple clicks on same node
-                this.clickCount++;
-                
-                if (this.clickCount === 2) {
-                    // Double click - change color
-                    this.nodes[nodeIndex].colorIndex = (this.nodes[nodeIndex].colorIndex + 1) % this.colors.length;
-                } else if (this.clickCount === 3) {
-                    // Triple click - delete node
-                    this.nodes.splice(nodeIndex, 1);
-                    this.edges = this.edges.filter(edge => 
-                        edge.from !== nodeIndex && edge.to !== nodeIndex
-                    );
-                    this.edges.forEach(edge => {
-                        if (edge.from > nodeIndex) edge.from--;
-                        if (edge.to > nodeIndex) edge.to--;
-                    });
-                    this.highlightedNode = null;
-                }
-            } else {
-                // First click on a node
-                this.clickCount = 1;
-                
-                // Handle highlighting and edge creation
-                if (this.highlightedNode === nodeIndex) {
-                    // Clicking the already highlighted node - unhighlight it
-                    this.highlightedNode = null;
-                } else if (this.highlightedNode !== null) {
-                    // Create edge between highlighted node and current node
-                    if (!this.edges.some(edge => 
-                        (edge.from === this.highlightedNode && edge.to === nodeIndex) ||
-                        (edge.from === nodeIndex && edge.to === this.highlightedNode)
-                    )) {
-                        this.edges.push({
-                            from: this.highlightedNode,
-                            to: nodeIndex,
-                            directed: false
-                        });
-                    }
-                    this.highlightedNode = null;
-                } else {
-                    // Highlight the clicked node
-                    this.highlightedNode = nodeIndex;
-                }
-            }
-
-            // Set up for potential dragging
-            this.isDragging = true;
-            this.draggedNode = nodeIndex;
-            this.lastClickedNode = nodeIndex;
-        } else {
-            // Edge or empty space clicked
-            const edgeIndex = this.findEdgeAtPosition(pos);
-            if (edgeIndex !== -1) {
-                if (timeDiff < 300 && edgeIndex === this.lastClickedEdge) {
-                    // Double click on edge - toggle direction
-                    this.edges[edgeIndex].directed = !this.edges[edgeIndex].directed;
-                } else {
-                    // Single click on edge - delete
-                    this.edges.splice(edgeIndex, 1);
-                }
-                this.lastClickedEdge = edgeIndex;
-            } else {
-                // Clicked empty space - add new node
-                const x = pos.x;
-                const y = pos.y;
-                this.nodes.push({ x, y, colorIndex: 0 });
-                this.lastClickedEdge = null;
+        for (let i = 0; i < this.edges.length; i++) {
+            const edge = this.edges[i];
+            const fromNode = this.nodes[edge.from.set][edge.from.index];
+            const toNode = this.nodes[edge.to.set][edge.to.index];
+            
+            const midX = (fromNode.x + toNode.x) / 2;
+            const midY = (fromNode.y + toNode.y) / 2;
+            
+            if (Math.hypot(midX - pos.x, midY - pos.y) < 20) {
+                return i;
             }
         }
-        
-        this.lastClickTime = currentTime;
+        return -1;
+    }
+   
+   handleStart(e) {
+       e.preventDefault();
+       const pos = this.getEventPosition(e);
+       
+       // First check for edge click
+       const edgeIndex = this.findEdgeAtPosition(pos);
+       if (edgeIndex !== -1) {
+           if (this.canHighlightEdge(edgeIndex)) {
+               this.toggleEdgeHighlight(edgeIndex);
+           }
+           return;
+       }
+       
+       // Then check for weight edit
+       const clickedEdge = this.findClickedEdgeWeight(pos);
+       if (clickedEdge !== null) {
+           this.startEdgeWeightEdit(clickedEdge, pos);
+           return;
+       }
+       
+       // Finally check for node drag
+       const clickedNode = this.findClickedNode(pos);
+       if (clickedNode) {
+           this.isDragging = true;
+           this.draggedNode = clickedNode;
+           this.lastDragPos = pos;
+       }
+   }
+
+    handleMove(e) {
+       if (!this.isDragging || !this.draggedNode) return;
+       e.preventDefault();
+       
+       const pos = this.getEventPosition(e);
+       
+       // Calculate new position with boundary constraints
+       const newX = Math.min(Math.max(pos.x, this.nodeRadius), this.canvas.width - this.nodeRadius);
+       const newY = Math.min(Math.max(pos.y, this.nodeRadius), this.canvas.height - this.nodeRadius);
+       
+       // Update node position with constrained values
+       this.draggedNode.x = newX;
+       this.draggedNode.y = newY;
+       
+       this.draw();
+   }
+    handleEnd(e) {
+       if (e) e.preventDefault();
+       this.isDragging = false;
+       this.draggedNode = null;
+       this.lastDragPos = null;
+   }
+
+    handleGlobalClick(e) {
+        if (this.isEditingWeight && !e.target.classList.contains('weight-input')) {
+            this.handleWeightInputComplete(document.querySelector('.weight-input'));
+        }
+    }
+
+   startEdgeWeightEdit(edgeIndex, pos) {
+       if (this.isEditingWeight) {
+           return;
+       }
+   
+       this.isEditingWeight = true;
+       this.editingEdge = edgeIndex;
+       
+       const input = document.createElement('input');
+       input.type = 'text';
+       input.classList.add('weight-input');
+       
+       const edge = this.edges[edgeIndex];
+       input.value = (edge.weight1 + edge.weight2).toFixed(2);
+       
+       const rect = this.canvas.getBoundingClientRect();
+       input.style.position = 'absolute';
+       input.style.left = `${pos.x + rect.left - 30}px`;
+       input.style.top = `${pos.y + rect.top - 10}px`;
+       
+       // Handle all input events
+       const completeEdit = () => {
+           if (this.isEditingWeight) {
+               this.handleWeightInputComplete(input);
+           }
+       };
+   
+       input.addEventListener('blur', completeEdit);
+       input.addEventListener('keydown', (e) => {
+           if (e.key === 'Enter') {
+               completeEdit();
+               e.preventDefault();
+           }
+       });
+   
+       // Prevent bubbling for touch events
+       input.addEventListener('touchstart', (e) => e.stopPropagation());
+       input.addEventListener('touchend', (e) => e.stopPropagation());
+       input.addEventListener('touchmove', (e) => e.stopPropagation());
+       input.addEventListener('mousedown', (e) => e.stopPropagation());
+   
+       document.body.appendChild(input);
+       setTimeout(() => {
+           input.focus();
+           input.select();
+       }, 50);
+   }
+   
+   handleWeightInputComplete(input) {
+       if (this.editingEdge !== null && input) {
+           let value = parseFloat(input.value);
+           
+           // If invalid, generate random weight
+           if (isNaN(value) || value < -1 || value > 1) {
+               value = this.generateWeight();
+           } else {
+               value = Number(value.toFixed(2));
+           }
+           
+           const edge = this.edges[this.editingEdge];
+           edge.weight1 = value / 2;
+           edge.weight2 = value / 2;
+           
+           this.updateScore();
+       }
+       
+       // Remove input and reset state
+       if (input && input.parentNode) {
+           input.parentNode.removeChild(input);
+       }
+       this.isEditingWeight = false;
+       this.editingEdge = null;
+       this.draw();
+   }
+
+
+    removeWeightInput() {
+        const input = document.querySelector('.weight-input');
+        if (input) {
+            input.remove();
+        }
+    }
+
+    canHighlightEdge(edgeIndex) {
+        const edge = this.edges[edgeIndex];
+        if (edge.highlighted) {
+            return true; // Can always unhighlight
+        }
+
+        if (this.highlightedEdges.size >= Math.min(this.setASize, this.setBSize)) {
+            return false;
+        }
+
+        for (let highlightedEdgeIndex of this.highlightedEdges) {
+            const highlightedEdge = this.edges[highlightedEdgeIndex];
+            if (this.nodesOverlap(edge, highlightedEdge)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    nodesOverlap(edge1, edge2) {
+        return (
+            (edge1.from.set === edge2.from.set && edge1.from.index === edge2.from.index) ||
+            (edge1.to.set === edge2.to.set && edge1.to.index === edge2.to.index)
+        );
+    }
+        toggleEdgeHighlight(edgeIndex) {
+        if (this.edges[edgeIndex].highlighted) {
+            this.edges[edgeIndex].highlighted = false;
+            this.highlightedEdges.delete(edgeIndex);
+        } else {
+            this.edges[edgeIndex].highlighted = true;
+            this.highlightedEdges.add(edgeIndex);
+        }
+        this.updateScore();
         this.draw();
     }
 
-    handleMove(e) {
-        e.preventDefault();
-        if (this.isDragging && this.draggedNode !== null) {
-            const pos = this.getMousePos(e);
-            this.nodes[this.draggedNode].x = pos.x;
-            this.nodes[this.draggedNode].y = pos.y;
-            this.draw();
+    updateScore() {
+    let totalScore = 0;
+    for (let edgeIndex of this.highlightedEdges) {
+        const edge = this.edges[edgeIndex];
+        // Make sure we're adding both weights and rounding at the end
+        totalScore += (edge.weight1 + edge.weight2);
+    }
+    // Round to 2 decimal places at the end of calculation
+    document.getElementById('currentScore').textContent = totalScore.toFixed(2);
+}
+
+findMaximumMatching() {
+    // Create weight matrix for easier access
+    const weights = Array(this.setASize).fill().map(() => Array(this.setBSize).fill(0));
+    for (let i = 0; i < this.setASize; i++) {
+        for (let j = 0; j < this.setBSize; j++) {
+            const edge = this.edges[i * this.setBSize + j];
+            weights[i][j] = edge.weight1 + edge.weight2;
         }
     }
 
-    handleEnd(e) {
-        e.preventDefault();
-        if (this.isDragging) {
-            this.isDragging = false;
-            this.draggedNode = null;
-            this.highlightedNode = null; // Unhighlight after dragging
-            this.draw();
+    // Helper function to check if a matching is valid
+    const isValidMatching = (matching) => {
+        const usedA = new Set();
+        const usedB = new Set();
+        for (const [a, b] of matching) {
+            if (usedA.has(a) || usedB.has(b)) return false;
+            usedA.add(a);
+            usedB.add(b);
+        }
+        return true;
+    };
+
+    // Helper function to get edge weight
+    const getEdgeWeight = (a, b) => weights[a][b];
+
+    let maxScore = -Infinity;
+    const generateMatchings = (current, aIndex) => {
+        if (aIndex === this.setASize) {
+            if (isValidMatching(current)) {
+                const score = current.reduce((sum, [a, b]) => 
+                    sum + getEdgeWeight(a, b), 0);
+                maxScore = Math.max(maxScore, score);
+            }
+            return;
+        }
+
+        // Try matching current A node with each B node
+        for (let b = 0; b < this.setBSize; b++) {
+            generateMatchings([...current, [aIndex, b]], aIndex + 1);
+        }
+        // Try not matching current A node
+        generateMatchings(current, aIndex + 1);
+    };
+
+    generateMatchings([], 0);
+    return maxScore === -Infinity ? 0 : maxScore;
+}
+
+checkMatching() {
+    const maxScore = this.findMaximumMatching();
+    const currentScore = Array.from(this.highlightedEdges)
+        .reduce((sum, edgeIndex) => {
+            const edge = this.edges[edgeIndex];
+            return sum + (edge.weight1 + edge.weight2);
+        }, 0);
+    
+    // Round both scores to 2 decimal places
+    document.getElementById('maxScore').textContent = maxScore.toFixed(2);
+    
+    const winMessage = document.getElementById('winMessage');
+    // Use a small epsilon for floating point comparison
+    if (Math.abs(currentScore - maxScore) < 0.01) {
+        winMessage.textContent = "You win! This is the best matching available.";
+        winMessage.style.display = 'block';
+    } else {
+        winMessage.style.display = 'none';
+    }
+}
+    hungarianAlgorithm(weights) {
+       const n = weights.length;
+       const lx = Array(n).fill(0);
+       const ly = Array(n).fill(0);
+       const match = Array(n).fill(-1);
+       
+       // Initialize lx with maximum weights from each row
+       for (let i = 0; i < n; i++) {
+           lx[i] = Math.max(...weights[i]);
+       }
+       
+       for (let k = 0; k < n; k++) {
+           let p = Array(n).fill(-1);
+           let used = Array(n).fill(false);
+           
+           let j1 = 0;
+           while (j1 < n) {
+               if (match[j1] === -1) break;
+               j1++;
+           }
+           if (j1 >= n) continue;
+           
+           let queue = [j1];
+           used[j1] = true;
+           let j2;
+           
+           do {
+               j2 = -1;
+               j1 = queue[queue.length - 1];
+               let delta = Infinity;
+               
+               for (let j = 0; j < n; j++) {
+                   if (!used[j]) {
+                       let cur = lx[k] + ly[j] - weights[k][j];
+                       if (cur < delta) {
+                           delta = cur;
+                           j2 = j;
+                       }
+                   }
+               }
+               
+               if (j2 !== -1) {
+                   if (delta > 0) {
+                       for (let j = 0; j < n; j++) {
+                           if (used[j]) ly[j] -= delta;
+                       }
+                       lx[k] += delta;
+                   }
+                   queue.push(j2);
+                   used[j2] = true;
+                   p[j2] = j1;
+               }
+           } while (j2 !== -1 && match[j2] === -1);
+           
+           if (j2 !== -1) {
+               let cur = j2;
+               while (cur !== -1) {
+                   let prev = p[cur];
+                   let next = match[prev];
+                   match[cur] = k;
+                   cur = next;
+               }
+           }
+       }
+       
+       let maxScore = 0;
+       for (let j = 0; j < n; j++) {
+           if (match[j] !== -1 && match[j] < this.setASize && j < this.setBSize) {
+               maxScore += weights[match[j]][j];
+           }
+       }
+       return maxScore;
+   }
+
+    resetGraph() {
+       // Clear existing state
+       this.nodes = { A: [], B: [] };
+       this.edges = [];
+       this.highlightedEdges = new Set();
+       
+       // Create nodes for set A with original positions
+       const ySpacingA = this.canvas.height / (this.setASize + 1);
+       for (let i = 0; i < this.setASize; i++) {
+           this.nodes.A.push({
+               x: this.canvas.width * 0.25, // Fixed left position
+               y: ySpacingA * (i + 1),
+               label: `A${i + 1}`,
+               set: 'A'
+           });
+       }
+   
+       // Create nodes for set B with original positions
+       const ySpacingB = this.canvas.height / (this.setBSize + 1);
+       for (let i = 0; i < this.setBSize; i++) {
+           this.nodes.B.push({
+               x: this.canvas.width * 0.75, // Fixed right position
+               y: ySpacingB * (i + 1),
+               label: `B${i + 1}`,
+               set: 'B'
+           });
+       }
+   
+       // Create edges with new random weights
+       for (let i = 0; i < this.setASize; i++) {
+           for (let j = 0; j < this.setBSize; j++) {
+               const weight1 = this.generateWeight();
+               const weight2 = this.generateWeight();
+               this.edges.push({
+                   from: { set: 'A', index: i },
+                   to: { set: 'B', index: j },
+                   weight1: weight1 / 2,
+                   weight2: weight2 / 2,
+                   highlighted: false
+               });
+           }
+       }
+   
+       // Reset scores and messages
+       document.getElementById('maxScore').textContent = '?';
+       document.getElementById('winMessage').style.display = 'none';
+       this.updateScore();
+       this.draw();
+   }
+
+    handleSizeChange(set, e) {
+        const value = parseInt(e.target.value);
+        if (value >= 1 && value <= 10) {
+            if (set === 'A') {
+                this.setASize = value;
+            } else {
+                this.setBSize = value;
+            }
+            this.initializeGraph();
+            document.getElementById('maxScore').textContent = '?';
+            document.getElementById('winMessage').style.display = 'none';
+        }
+    }
+
+    toggleInstructions() {
+        const instructionsOverlay = document.querySelector(".instructions-overlay");
+        const gameCanvas = document.getElementById("gameCanvas");
+        const toggleButton = document.getElementById("toggleInstructions");
+
+        if (instructionsOverlay.style.display === "none" || instructionsOverlay.style.display === "") {
+            instructionsOverlay.style.display = "flex";
+            gameCanvas.classList.add("hidden");
+            toggleButton.textContent = "Resume Game";
+        } else {
+            instructionsOverlay.style.display = "none";
+            gameCanvas.classList.remove("hidden");
+            toggleButton.textContent = "Instructions";
         }
     }
 
@@ -227,107 +705,62 @@ class GraphGame {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         // Draw edges
-        this.edges.forEach(edge => {
-            const fromNode = this.nodes[edge.from];
-            const toNode = this.nodes[edge.to];
+        this.edges.forEach((edge, index) => {
+            const fromNode = this.nodes[edge.from.set][edge.from.index];
+            const toNode = this.nodes[edge.to.set][edge.to.index];
             
-            // Calculate the direction vector
-            const dx = toNode.x - fromNode.x;
-            const dy = toNode.y - fromNode.y;
-            const length = Math.sqrt(dx * dx + dy * dy);
-            const unitX = dx / length;
-            const unitY = dy / length;
-
-            // Calculate start and end points accounting for node radius
-            const startX = fromNode.x + unitX * this.nodeRadius;
-            const startY = fromNode.y + unitY * this.nodeRadius;
-            const endX = toNode.x - unitX * this.nodeRadius;
-            const endY = toNode.y - unitY * this.nodeRadius;
-
-            // Draw the main line
             this.ctx.beginPath();
-            this.ctx.moveTo(startX, startY);
-            this.ctx.lineTo(endX, endY);
-            this.ctx.strokeStyle = '#666';
-            this.ctx.lineWidth = 2;
+            this.ctx.moveTo(fromNode.x, fromNode.y);
+            this.ctx.lineTo(toNode.x, toNode.y);
+            this.ctx.strokeStyle = edge.highlighted ? '#000' : '#666';
+            this.ctx.lineWidth = edge.highlighted ? 3 : 1;
             this.ctx.stroke();
 
-            // Draw arrow if edge is directed
-            if (edge.directed) {
-                const arrowLength = 15;
-                const arrowWidth = 8;
-                
-                // Draw arrow at end point
-                const arrowStartX = endX - unitX * arrowLength;
-                const arrowStartY = endY - unitY * arrowLength;
-                const perpX = -unitY * arrowWidth;
-                const perpY = unitX * arrowWidth;
-
-                this.ctx.beginPath();
-                this.ctx.moveTo(endX, endY);
-                this.ctx.lineTo(arrowStartX + perpX, arrowStartY + perpY);
-                this.ctx.lineTo(arrowStartX - perpX, arrowStartY - perpY);
-                this.ctx.closePath();
-                this.ctx.fillStyle = '#666';
-                this.ctx.fill();
+            const midX = (fromNode.x + toNode.x) / 2;
+            const midY = (fromNode.y + toNode.y) / 2;
+            
+            this.ctx.save();
+            this.ctx.translate(midX, midY);
+            
+            let angle = Math.atan2(toNode.y - fromNode.y, toNode.x - fromNode.x);
+            if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
+                angle += Math.PI;
             }
+            
+            this.ctx.rotate(angle);
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillStyle = edge.highlighted ? '#000' : '#666';
+            this.ctx.font = edge.highlighted ? 'bold 14px Arial' : '14px Arial';
+            
+            const totalWeight = (edge.weight1 + edge.weight2).toFixed(2);
+            this.ctx.fillText(totalWeight, 0, -10);
+            
+            this.ctx.restore();
         });
 
         // Draw nodes
-        this.nodes.forEach((node, index) => {
-            this.ctx.beginPath();
-            this.ctx.arc(node.x, node.y, this.nodeRadius, 0, Math.PI * 2);
-            this.ctx.fillStyle = this.colors[node.colorIndex];
-            this.ctx.fill();
-            this.ctx.strokeStyle = index === this.highlightedNode ? '#000' : '#333';
-            this.ctx.lineWidth = index === this.highlightedNode ? 3 : 1;
-            this.ctx.stroke();
-            
-            // Draw node number
-            this.ctx.fillStyle = 'white';
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.font = '16px Arial';
-            this.ctx.fillText(index.toString(), node.x, node.y);
-        });
-    }
+        for (const set of ['A', 'B']) {
+            this.nodes[set].forEach((node, index) => {
+                this.ctx.beginPath();
+                this.ctx.arc(node.x, node.y, this.nodeRadius, 0, Math.PI * 2);
+                this.ctx.fillStyle = set === 'A' ? '#f44336' : '#2196F3';
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#333';
+                this.ctx.lineWidth = 1;
+                this.ctx.stroke();
 
-    hideGraph() {
-        this.pausedNodes = [...this.nodes];
-        this.pausedEdges = [...this.edges];
-        this.nodes = [];
-        this.edges = [];
-        this.draw();
-    }
-
-    showGraph() {
-        this.nodes = [...this.pausedNodes];
-        this.edges = [...this.pausedEdges];
-        this.draw();
+                this.ctx.fillStyle = 'white';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.font = '16px Arial';
+                this.ctx.fillText(node.label, node.x, node.y);
+            });
+        }
     }
 }
 
-let gameInstance = null;
-window.onload = () => {
-    gameInstance = new GraphGame();
-};
-
-document.addEventListener("DOMContentLoaded", function() {
-    const instructionsOverlay = document.querySelector(".instructions-overlay");
-    const gameCanvas = document.getElementById("gameCanvas");
-    const toggleButton = document.getElementById("toggleInstructions");
-
-    toggleButton.addEventListener("click", function() {
-        if (instructionsOverlay.style.display === "none" || instructionsOverlay.style.display === "") {
-            instructionsOverlay.style.display = "flex";
-            gameCanvas.classList.add("hidden");
-            toggleButton.textContent = "Resume Game";
-            if (gameInstance) gameInstance.hideGraph();
-        } else {
-            instructionsOverlay.style.display = "none";
-            gameCanvas.classList.remove("hidden");
-            toggleButton.textContent = "Instructions";
-            if (gameInstance) gameInstance.showGraph();
-        }
-    });
+// Initialize game when window loads
+window.addEventListener('load', () => {
+    new BipartiteMatchingGame();
 });
