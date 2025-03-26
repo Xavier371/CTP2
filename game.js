@@ -343,10 +343,10 @@ function handleMove(key) {
             // Blue's turn (Arrow keys)
             const oldPos = { ...bluePos };
             switch (key) {
-                case 'ArrowLeft': if (bluePos.x > 0) bluePos.x--; break;
-                case 'ArrowRight': if (bluePos.x < GRID_SIZE - 1) bluePos.x++; break;
-                case 'ArrowUp': if (bluePos.y > 0) bluePos.y--; break;
-                case 'ArrowDown': if (bluePos.y < GRID_SIZE - 1) bluePos.y++; break;
+                case 'ArrowLeft': case 'a': if (bluePos.x > 0) bluePos.x--; break;
+                case 'ArrowRight': case 'd': if (bluePos.x < GRID_SIZE - 1) bluePos.x++; break;
+                case 'ArrowUp': case 'w': if (bluePos.y > 0) bluePos.y--; break;
+                case 'ArrowDown': case 's': if (bluePos.y < GRID_SIZE - 1) bluePos.y++; break;
                 default: return;
             }
 
@@ -365,10 +365,10 @@ function handleMove(key) {
         // Single-player mode logic
         const oldPos = { ...bluePos };
         switch (key) {
-            case 'ArrowLeft': if (bluePos.x > 0) bluePos.x--; break;
-            case 'ArrowRight': if (bluePos.x < GRID_SIZE - 1) bluePos.x++; break;
-            case 'ArrowUp': if (bluePos.y > 0) bluePos.y--; break;
-            case 'ArrowDown': if (bluePos.y < GRID_SIZE - 1) bluePos.y++; break;
+            case 'ArrowLeft': case 'a': if (bluePos.x > 0) bluePos.x--; break;
+            case 'ArrowRight': case 'd': if (bluePos.x < GRID_SIZE - 1) bluePos.x++; break;
+            case 'ArrowUp': case 'w': if (bluePos.y > 0) bluePos.y--; break;
+            case 'ArrowDown': case 's': if (bluePos.y < GRID_SIZE - 1) bluePos.y++; break;
             default: return;
         }
 
@@ -390,6 +390,9 @@ function handleMove(key) {
     
     drawGame();
 }
+
+// Updated event listener
+
 
 function toggleMode() {
     if (gameMode === 'offense') {
@@ -422,11 +425,11 @@ window.onclick = function(event) {
     }
 }
 
-// Updated event listener to include Enter key reset
+
+
 document.addEventListener('keydown', (e) => {
     e.preventDefault();
     
-    // Add Enter key reset functionality
     if (e.key === 'Enter') {
         resetGame();
         return;
@@ -435,11 +438,12 @@ document.addEventListener('keydown', (e) => {
     if (gameMode === 'twoPlayer') {
         if (redTurn && ['w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
             handleMove(e.key.toLowerCase());
-        } else if (!redTurn && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        } else if (!redTurn && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
             handleMove(e.key);
         }
     } else {
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        // Allow both WASD and arrow keys in single player
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
             handleMove(e.key);
         }
     }
