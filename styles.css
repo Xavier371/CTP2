@@ -72,7 +72,7 @@ canvas {
 
 .modal-content {
     background-color: #fefefe;
-    margin: 5% auto;  /* Changed from 15% to 5% */
+    margin: 2% auto;  /* Changed from 5% to 2% to position even higher */
     padding: 30px;
     border: 1px solid #888;
     width: 80%;
