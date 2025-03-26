@@ -24,29 +24,23 @@ window.onload = function() {
     });
 
     // Instructions modal
-    const instructionsButton = document.getElementById('instructionsButton');
-    const closeInstructionsButton = document.getElementById('closeInstructions');
     const modal = document.getElementById('instructionsModal');
-    
-    instructionsButton.addEventListener('click', () => {
+    document.getElementById('instructionsButton').onclick = function() {
         modal.style.display = 'block';
-    });
-    
-    closeInstructionsButton.addEventListener('click', () => {
+    }
+    document.getElementById('closeInstructions').onclick = function() {
         modal.style.display = 'none';
-    });
-    
+    }
     window.onclick = function(event) {
         if (event.target == modal) {
             modal.style.display = 'none';
         }
-    };
+    }
 }
 
 function toggleMode() {
     gameMode = gameMode === 'offense' ? 'defense' : 'offense';
-    const modeButton = document.getElementById('modeButton');
-    modeButton.textContent = gameMode.charAt(0).toUpperCase() + gameMode.slice(1);
+    document.getElementById('modeButton').textContent = gameMode.charAt(0).toUpperCase() + gameMode.slice(1);
     document.getElementById('subtitle').textContent = gameMode === 'offense' ? 
         'Try to catch the red point!' : 
         'Try to escape from the red point!';
@@ -63,12 +57,30 @@ function resetGame() {
         redPos = {x: 0, y: Math.floor(Math.random() * GRID_SIZE)};
     }
     
+    // Initialize all edges as existing
     edges = Array(GRID_SIZE).fill().map(() => 
         Array(GRID_SIZE).fill().map(() => ({
             right: true,
             bottom: true
         }))
     );
+    
+    // Remove two random internal edges
+    let internalEdgesRemoved = 0;
+    while (internalEdgesRemoved < 2) {
+        // Pick random internal coordinates (not on boundary)
+        const i = 1 + Math.floor(Math.random() * (GRID_SIZE - 2));
+        const j = 1 + Math.floor(Math.random() * (GRID_SIZE - 2));
+        
+        // Randomly choose between right or bottom edge
+        if (Math.random() < 0.5 && edges[i][j].right) {
+            edges[i][j].right = false;
+            internalEdgesRemoved++;
+        } else if (edges[i][j].bottom) {
+            edges[i][j].bottom = false;
+            internalEdgesRemoved++;
+        }
+    }
     
     gameOver = false;
     drawGame();
@@ -127,7 +139,6 @@ function removeRandomEdge() {
     for (let i = 0; i < GRID_SIZE; i++) {
         for (let j = 0; j < GRID_SIZE; j++) {
             if (i < GRID_SIZE - 1 && edges[i][j].right) {
-                // Check if removing this edge would isolate either point
                 edges[i][j].right = false;
                 if (hasPath(redPos) && hasPath(bluePos)) {
                     availableEdges.push({x: i, y: j, type: 'right'});
@@ -202,33 +213,20 @@ function checkGameOver() {
 function drawGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw grid
+    // Draw only the remaining edges in light gray
     ctx.strokeStyle = '#ccc';
     ctx.lineWidth = 1;
-    for (let i = 0; i <= GRID_SIZE; i++) {
-        ctx.beginPath();
-        ctx.moveTo(i * CELL_SIZE, 0);
-        ctx.lineTo(i * CELL_SIZE, canvas.height);
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.moveTo(0, i * CELL_SIZE);
-        ctx.lineTo(canvas.width, i * CELL_SIZE);
-        ctx.stroke();
-    }
     
-    // Draw edges that have been removed
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 3;
+    // Draw vertical edges that still exist
     for (let i = 0; i < GRID_SIZE; i++) {
         for (let j = 0; j < GRID_SIZE; j++) {
-            if (!edges[i][j].right && i < GRID_SIZE - 1) {
+            if (edges[i][j].right && i < GRID_SIZE - 1) {
                 ctx.beginPath();
                 ctx.moveTo((i + 1) * CELL_SIZE, j * CELL_SIZE);
                 ctx.lineTo((i + 1) * CELL_SIZE, (j + 1) * CELL_SIZE);
                 ctx.stroke();
             }
-            if (!edges[i][j].bottom && j < GRID_SIZE - 1) {
+            if (edges[i][j].bottom && j < GRID_SIZE - 1) {
                 ctx.beginPath();
                 ctx.moveTo(i * CELL_SIZE, (j + 1) * CELL_SIZE);
                 ctx.lineTo((i + 1) * CELL_SIZE, (j + 1) * CELL_SIZE);
