@@ -154,29 +154,15 @@ function isEdgeBetweenPoints(edge, pos1, pos2) {
     );
 }
 
-// Modified to prevent point isolation
-// Modified to prevent point isolation
 function removeRandomEdge() {
     const activeEdges = edges.filter(edge => {
         if (!edge.active) return false;
-        
-        // Don't remove edge between points if they're adjacent
+        // ONLY prevent removing the edge if points are DIRECTLY ADJACENT
         if (getDistance(bluePos, redPos) === 1 && 
             isEdgeBetweenPoints(edge, bluePos, redPos)) {
             return false;
         }
-
-        // Temporarily deactivate the edge
-        edge.active = false;
-        
-        // Check if removing this edge would isolate any point
-        const hasValidPath = findShortestPath(bluePos, redPos) !== null;
-        
-        // Reactivate the edge
-        edge.active = true;
-        
-        // Only include edges that won't isolate points
-        return hasValidPath;
+        return true;
     });
 
     if (activeEdges.length > 0) {
