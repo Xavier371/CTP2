@@ -155,6 +155,7 @@ function isEdgeBetweenPoints(edge, pos1, pos2) {
 }
 
 // Modified to prevent point isolation
+// Modified to prevent point isolation
 function removeRandomEdge() {
     const activeEdges = edges.filter(edge => {
         if (!edge.active) return false;
