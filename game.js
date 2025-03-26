@@ -12,23 +12,21 @@ window.onload = function() {
     canvas.width = GRID_SIZE * CELL_SIZE;
     canvas.height = GRID_SIZE * CELL_SIZE;
     
-    const modeButton = document.getElementById('modeButton');
-    const resetButton = document.getElementById('resetButton');
-    const instructionsButton = document.getElementById('instructionsButton');
-    const closeInstructionsButton = document.getElementById('closeInstructions');
-    const modal = document.getElementById('instructionsModal');
-    
     resetGame();
     
     document.addEventListener('keydown', (e) => handleMove(e.key));
-    resetButton.addEventListener('click', resetGame);
+    document.getElementById('resetButton').addEventListener('click', resetGame);
+    document.getElementById('modeButton').addEventListener('click', toggleMode);
     
     // Add Enter key reset
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') resetGame();
     });
-    
-    modeButton.addEventListener('click', toggleMode);
+
+    // Instructions modal
+    const instructionsButton = document.getElementById('instructionsButton');
+    const closeInstructionsButton = document.getElementById('closeInstructions');
+    const modal = document.getElementById('instructionsModal');
     
     instructionsButton.addEventListener('click', () => {
         modal.style.display = 'block';
@@ -38,27 +36,21 @@ window.onload = function() {
         modal.style.display = 'none';
     });
     
-    window.addEventListener('click', (e) => {
-        if (e.target === modal) {
+    window.onclick = function(event) {
+        if (event.target == modal) {
             modal.style.display = 'none';
         }
-    });
+    };
 }
 
 function toggleMode() {
     gameMode = gameMode === 'offense' ? 'defense' : 'offense';
     const modeButton = document.getElementById('modeButton');
     modeButton.textContent = gameMode.charAt(0).toUpperCase() + gameMode.slice(1);
-    modeButton.className = 'game-button ' + gameMode + '-mode';
-    updateGameTitle();
-    resetGame();
-}
-
-function updateGameTitle() {
-    const subtitle = document.getElementById('subtitle');
-    subtitle.textContent = gameMode === 'offense' ? 
+    document.getElementById('subtitle').textContent = gameMode === 'offense' ? 
         'Try to catch the red point!' : 
         'Try to escape from the red point!';
+    resetGame();
 }
 
 function resetGame() {
@@ -80,46 +72,6 @@ function resetGame() {
     
     gameOver = false;
     drawGame();
-    updateGameTitle();
-}
-
-function removeRandomEdge() {
-    const availableEdges = [];
-    
-    // Collect all edges that won't isolate points
-    for (let i = 0; i < GRID_SIZE; i++) {
-        for (let j = 0; j < GRID_SIZE; j++) {
-            if (i < GRID_SIZE - 1 && edges[i][j].right) {
-                // Check if removing this edge would isolate either point
-                edges[i][j].right = false;
-                if (hasPath(redPos) && hasPath(bluePos)) {
-                    availableEdges.push({x: i, y: j, type: 'right'});
-                }
-                edges[i][j].right = true;
-            }
-            if (j < GRID_SIZE - 1 && edges[i][j].bottom) {
-                edges[i][j].bottom = false;
-                if (hasPath(redPos) && hasPath(bluePos)) {
-                    availableEdges.push({x: i, y: j, type: 'bottom'});
-                }
-                edges[i][j].bottom = true;
-            }
-        }
-    }
-    
-    if (availableEdges.length > 0) {
-        const edge = availableEdges[Math.floor(Math.random() * availableEdges.length)];
-        edges[edge.x][edge.y][edge.type] = false;
-    }
-}
-
-function hasPath(pos) {
-    // Check if point has at least one connected edge
-    if (pos.x > 0 && edges[pos.x-1][pos.y].right) return true;
-    if (pos.x < GRID_SIZE-1 && edges[pos.x][pos.y].right) return true;
-    if (pos.y > 0 && edges[pos.x][pos.y-1].bottom) return true;
-    if (pos.y < GRID_SIZE-1 && edges[pos.x][pos.y].bottom) return true;
-    return false;
 }
 
 function handleMove(key) {
@@ -158,12 +110,10 @@ function handleMove(key) {
 
 function canMove(from, to) {
     if (from.x === to.x) {
-        // Vertical movement
         const minY = Math.min(from.y, to.y);
         const maxY = Math.max(from.y, to.y);
         return minY === maxY || edges[from.x][minY].bottom;
     } else if (from.y === to.y) {
-        // Horizontal movement
         const minX = Math.min(from.x, to.x);
         const maxX = Math.max(from.x, to.x);
         return minX === maxX || edges[minX][from.y].right;
@@ -171,8 +121,44 @@ function canMove(from, to) {
     return false;
 }
 
+function removeRandomEdge() {
+    const availableEdges = [];
+    
+    for (let i = 0; i < GRID_SIZE; i++) {
+        for (let j = 0; j < GRID_SIZE; j++) {
+            if (i < GRID_SIZE - 1 && edges[i][j].right) {
+                // Check if removing this edge would isolate either point
+                edges[i][j].right = false;
+                if (hasPath(redPos) && hasPath(bluePos)) {
+                    availableEdges.push({x: i, y: j, type: 'right'});
+                }
+                edges[i][j].right = true;
+            }
+            if (j < GRID_SIZE - 1 && edges[i][j].bottom) {
+                edges[i][j].bottom = false;
+                if (hasPath(redPos) && hasPath(bluePos)) {
+                    availableEdges.push({x: i, y: j, type: 'bottom'});
+                }
+                edges[i][j].bottom = true;
+            }
+        }
+    }
+    
+    if (availableEdges.length > 0) {
+        const edge = availableEdges[Math.floor(Math.random() * availableEdges.length)];
+        edges[edge.x][edge.y][edge.type] = false;
+    }
+}
+
+function hasPath(pos) {
+    if (pos.x > 0 && edges[pos.x-1][pos.y].right) return true;
+    if (pos.x < GRID_SIZE-1 && edges[pos.x][pos.y].right) return true;
+    if (pos.y > 0 && edges[pos.x][pos.y-1].bottom) return true;
+    if (pos.y < GRID_SIZE-1 && edges[pos.x][pos.y].bottom) return true;
+    return false;
+}
+
 function checkGameOver() {
-    // Check if points are adjacent
     if (Math.abs(redPos.x - bluePos.x) <= 1 && Math.abs(redPos.y - bluePos.y) <= 1) {
         if (canMove(redPos, bluePos)) {
             gameOver = true;
@@ -181,7 +167,6 @@ function checkGameOver() {
         }
     }
     
-    // Check if points are separated
     const visited = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(false));
     const canReach = (pos, target, visited) => {
         if (pos.x === target.x && pos.y === target.y) return true;
@@ -232,7 +217,7 @@ function drawGame() {
         ctx.stroke();
     }
     
-    // Draw edges
+    // Draw edges that have been removed
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 3;
     for (let i = 0; i < GRID_SIZE; i++) {
@@ -267,7 +252,6 @@ function drawGame() {
 function moveRedEvade() {
     const moves = [];
     
-    // Check all possible moves
     if (redPos.x > 0 && canMove(redPos, {x: redPos.x-1, y: redPos.y})) 
         moves.push({x: redPos.x-1, y: redPos.y});
     if (redPos.x < GRID_SIZE-1 && canMove(redPos, {x: redPos.x+1, y: redPos.y})) 
@@ -278,7 +262,6 @@ function moveRedEvade() {
         moves.push({x: redPos.x, y: redPos.y+1});
     
     if (moves.length > 0) {
-        // Choose move that maximizes distance from blue
         let bestMove = moves[0];
         let maxDist = Math.abs(moves[0].x - bluePos.x) + Math.abs(moves[0].y - bluePos.y);
         
@@ -297,7 +280,6 @@ function moveRedEvade() {
 function moveBlueAttack() {
     const moves = [];
     
-    // Check all possible moves
     if (bluePos.x > 0 && canMove(bluePos, {x: bluePos.x-1, y: bluePos.y})) 
         moves.push({x: bluePos.x-1, y: bluePos.y});
     if (bluePos.x < GRID_SIZE-1 && canMove(bluePos, {x: bluePos.x+1, y: bluePos.y})) 
@@ -308,7 +290,6 @@ function moveBlueAttack() {
         moves.push({x: bluePos.x, y: bluePos.y+1});
     
     if (moves.length > 0) {
-        // Choose move that minimizes distance to red
         let bestMove = moves[0];
         let minDist = Math.abs(moves[0].x - redPos.x) + Math.abs(moves[0].y - redPos.y);
         
