@@ -57,11 +57,16 @@ function initializePositions() {
             y: Math.floor(Math.random() * GRID_SIZE)
         };
     } else {
-        // Two player mode - random positions
-        do {
-            bluePos = getRandomPosition();
-            redPos = getRandomPosition();
-        } while (getDistance(bluePos, redPos) < 3);
+        // Two player mode - also start on opposite sides
+        // Blue on left, red on right (like offense mode)
+        bluePos = {
+            x: 0,
+            y: Math.floor(Math.random() * GRID_SIZE)
+        };
+        redPos = {
+            x: GRID_SIZE - 1,
+            y: Math.floor(Math.random() * GRID_SIZE)
+        };
     }
 }
 
