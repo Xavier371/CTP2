@@ -54,11 +54,15 @@ canvas {
 #message {
     font-size: 24px;
     color: #333;
-    margin: 10px 0 35px 0;  /* Adjusted to 35px for even spacing */
+    margin: 10px 0 0 0;
     font-weight: normal;
     text-decoration: underline;
     text-align: center;
     min-height: 36px;
+}
+
+#message:not(:empty) {
+    margin-bottom: 35px;
 }
 
 .modal {
