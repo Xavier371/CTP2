@@ -290,7 +290,7 @@ function checkGameOver() {
     if (!path) {
         gameOver = true;
         if (gameMode === 'offense') {
-            document.getElementById('message').textContent = 'Red Wins - Points are separated!';
+            document.getElementById('message').textContent = 'Red Wins - Points are separated!';  // Changed this
         } else if (gameMode === 'defense') {
             document.getElementById('message').textContent = 'Blue Wins - Points are separated!';
         } else {
