@@ -19,9 +19,9 @@ let redTurn = true; // Red always moves first
 function updateGameTitle() {
     const title = document.getElementById('gameTitle');
     if (gameMode === 'offense') {
-        title.textContent = 'Try to catch the red point!';
+        title.textContent = 'You are the blue point, try to catch red';
     } else if (gameMode === 'defense') {
-        title.textContent = 'Try to escape from the red point!';
+        title.textContent = 'You are the blue point, try to evade red';
     } else {
         title.textContent = 'Two Player Mode';
     }
