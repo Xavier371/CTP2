@@ -92,9 +92,35 @@ function initializeEdges() {
 }
 
 function removeInitialEdges() {
-    // Remove two random edges at start
-    for (let i = 0; i < 2; i++) {
-        removeRandomEdge();
+    let internalEdges = edges.filter(edge => {
+        // Check if edge is internal (not on the border)
+        return !(edge.x1 === 0 || edge.x1 === GRID_SIZE - 1 || 
+                edge.x2 === 0 || edge.x2 === GRID_SIZE - 1 ||
+                edge.y1 === 0 || edge.y1 === GRID_SIZE - 1 || 
+                edge.y2 === 0 || edge.y2 === GRID_SIZE - 1);
+    });
+    
+    // Remove three random internal edges
+    for (let i = 0; i < 3; i++) {
+        if (internalEdges.length > 0) {
+            const randomIndex = Math.floor(Math.random() * internalEdges.length);
+            const selectedEdge = internalEdges[randomIndex];
+            
+            // Find and deactivate the edge in the main edges array
+            const mainEdgeIndex = edges.findIndex(edge => 
+                edge.x1 === selectedEdge.x1 && 
+                edge.y1 === selectedEdge.y1 && 
+                edge.x2 === selectedEdge.x2 && 
+                edge.y2 === selectedEdge.y2
+            );
+            
+            if (mainEdgeIndex !== -1) {
+                edges[mainEdgeIndex].active = false;
+            }
+            
+            // Remove the selected edge from internalEdges
+            internalEdges.splice(randomIndex, 1);
+        }
     }
 }
 function drawGame() {
