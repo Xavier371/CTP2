@@ -285,6 +285,7 @@ function moveRedAttack() {
     return true;
 }
 
+
 function checkGameOver() {
     if (bluePos.x === redPos.x && bluePos.y === redPos.y) {
         gameOver = true;
@@ -295,7 +296,6 @@ function checkGameOver() {
         } else {
             document.getElementById('message').textContent = 'Blue Wins - Points are joined';
         }
-        document.querySelector('.container').classList.add('game-over-spacing');
         return true;
     }
     
@@ -309,23 +309,20 @@ function checkGameOver() {
         } else {
             document.getElementById('message').textContent = 'Red Wins - Points are separated';
         }
-        document.querySelector('.container').classList.add('game-over-spacing');
         return true;
     }
     
     return false;
 }
 
-
-
 function handleMove(key) {
     if (gameOver) return;
 
     if (gameMode === 'twoPlayer') {
         if (redTurn) {
-            // Red's turn (WASD)
+            // Red's turn (WASD only)
             const oldPos = { ...redPos };
-            switch (key) {
+            switch (key.toLowerCase()) {
                 case 'w': if (redPos.y > 0) redPos.y--; break;
                 case 's': if (redPos.y < GRID_SIZE - 1) redPos.y++; break;
                 case 'a': if (redPos.x > 0) redPos.x--; break;
@@ -335,7 +332,7 @@ function handleMove(key) {
 
             if (canMove(oldPos, redPos)) {
                 removeRandomEdge();
-                redTurn = false;  // Switch to blue's turn
+                redTurn = false;
                 if (checkGameOver()) {
                     drawGame();
                     return;
@@ -344,19 +341,19 @@ function handleMove(key) {
                 redPos = oldPos;
             }
         } else {
-            // Blue's turn (Arrow keys)
+            // Blue's turn (Arrow keys only)
             const oldPos = { ...bluePos };
             switch (key) {
-                case 'ArrowLeft': case 'a': if (bluePos.x > 0) bluePos.x--; break;
-                case 'ArrowRight': case 'd': if (bluePos.x < GRID_SIZE - 1) bluePos.x++; break;
-                case 'ArrowUp': case 'w': if (bluePos.y > 0) bluePos.y--; break;
-                case 'ArrowDown': case 's': if (bluePos.y < GRID_SIZE - 1) bluePos.y++; break;
+                case 'ArrowLeft': if (bluePos.x > 0) bluePos.x--; break;
+                case 'ArrowRight': if (bluePos.x < GRID_SIZE - 1) bluePos.x++; break;
+                case 'ArrowUp': if (bluePos.y > 0) bluePos.y--; break;
+                case 'ArrowDown': if (bluePos.y < GRID_SIZE - 1) bluePos.y++; break;
                 default: return;
             }
 
             if (canMove(oldPos, bluePos)) {
                 removeRandomEdge();
-                redTurn = true;  // Switch back to red's turn
+                redTurn = true;
                 if (checkGameOver()) {
                     drawGame();
                     return;
@@ -366,13 +363,13 @@ function handleMove(key) {
             }
         }
     } else {
-        // Single-player mode logic
+        // Single-player mode logic - Arrow keys only for blue
         const oldPos = { ...bluePos };
         switch (key) {
-            case 'ArrowLeft': case 'a': if (bluePos.x > 0) bluePos.x--; break;
-            case 'ArrowRight': case 'd': if (bluePos.x < GRID_SIZE - 1) bluePos.x++; break;
-            case 'ArrowUp': case 'w': if (bluePos.y > 0) bluePos.y--; break;
-            case 'ArrowDown': case 's': if (bluePos.y < GRID_SIZE - 1) bluePos.y++; break;
+            case 'ArrowLeft': if (bluePos.x > 0) bluePos.x--; break;
+            case 'ArrowRight': if (bluePos.x < GRID_SIZE - 1) bluePos.x++; break;
+            case 'ArrowUp': if (bluePos.y > 0) bluePos.y--; break;
+            case 'ArrowDown': if (bluePos.y < GRID_SIZE - 1) bluePos.y++; break;
             default: return;
         }
 
@@ -394,9 +391,6 @@ function handleMove(key) {
     
     drawGame();
 }
-
-// Updated event listener
-
 
 function toggleMode() {
     if (gameMode === 'offense') {
@@ -429,8 +423,7 @@ window.onclick = function(event) {
     }
 }
 
-
-
+// Updated event listener to include Enter key reset
 document.addEventListener('keydown', (e) => {
     e.preventDefault();
     
@@ -439,20 +432,16 @@ document.addEventListener('keydown', (e) => {
         return;
     }
     
-    const key = e.key.toLowerCase();
-    const arrowKeys = ['arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
-    const wasdKeys = ['w', 'a', 's', 'd'];
-    
     if (gameMode === 'twoPlayer') {
-        if (redTurn && wasdKeys.includes(key)) {
-            handleMove(key);
-        } else if (!redTurn && (arrowKeys.includes(key) || wasdKeys.includes(key))) {
-            handleMove(e.key); // Use original key for arrow keys
+        if (redTurn && ['w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
+            handleMove(e.key);
+        } else if (!redTurn && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            handleMove(e.key);
         }
     } else {
-        // Single player mode - allow both WASD and arrow keys
-        if (arrowKeys.includes(key) || wasdKeys.includes(key)) {
-            handleMove(e.key); // Use original key for arrow keys
+        // Single player mode - only arrow keys
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            handleMove(e.key);
         }
     }
 });
@@ -461,7 +450,6 @@ function resetGame() {
     gameOver = false;
     redTurn = true;  // Red always starts
     document.getElementById('message').textContent = '';
-    document.querySelector('.container').classList.remove('game-over-spacing');
     
     // Initialize edges first (includes removing two random edges)
     initializeEdges();
@@ -472,9 +460,6 @@ function resetGame() {
     updateGameTitle();
     drawGame();
 }
-
-// Updated event listener
-
 
 // Initialize game
 resetGame();
