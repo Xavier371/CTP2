@@ -6,15 +6,16 @@
 </head>
 <body>
     <div class="container">
-        <h1 id="title">Catch the Point</h1>
-        <h2 id="subtitle">Try to catch the red point</h2>
+        <h1>Catch the Point</h1>
+        <h2 id="subtitle">You are blue, try to catch the red point</h2>
         
         <canvas id="gameCanvas"></canvas>
         
         <div class="controls">
-            <button id="resetButton" class="game-button">Reset Game</button>
-            <button id="modeButton" class="game-button offense-mode">Offense</button>
-            <button id="instructionsButton" class="game-button">How to Play</button>
+            <button id="resetButton">Reset Game</button>
+            <button id="modeButton">Offense</button>
+            <button id="twoPlayerButton">Two Player</button>
+            <button id="instructionsButton">How to Play</button>
         </div>
     </div>
 
@@ -25,14 +26,20 @@
             
             <h3>Offense Mode</h3>
             <ul>
-                <li>You are the blue point, try and catch the red point by moving towards it</li>
+                <li>You are the blue point, trying to capture the red point</li>
                 <li>Red will try to maintain distance and find escape routes</li>
             </ul>
 
             <h3>Defense Mode</h3>
             <ul>
-                <li>You are the blue point, try and evade the red point by maximizing the distance from it</li>
+                <li>You are the blue point, trying to evade the red point</li>
                 <li>Stay connected to multiple paths to avoid being trapped</li>
+            </ul>
+
+            <h3>Two Player Mode</h3>
+            <ul>
+                <li>Red uses WASD, Blue uses arrow keys, Blue is chasing red</li>
+                <li>Take turns trying to catch or escape each other</li>
             </ul>
 
             <h3>Game Basics</h3>
@@ -42,7 +49,7 @@
                 <li>Press Enter to restart anytime</li>
             </ul>
 
-            <button id="closeInstructions" class="game-button">Close</button>
+            <button id="closeInstructions">Close</button>
         </div>
     </div>
 
