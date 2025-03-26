@@ -7,19 +7,16 @@
 <body>
     <div class="container">
         <h1>Catch the Point</h1>
-        <h2 id="subtitle">You are blue, try to catch the red point</h2>
-        
+        <div id="gameTitle" class="game-title">Try to catch the red point!</div>
         <canvas id="gameCanvas"></canvas>
-        
         <div class="controls">
-            <button id="resetButton">Reset Game</button>
-            <button id="modeButton">Offense</button>
-            <button id="twoPlayerButton">Two Player</button>
-            <button id="instructionsButton">How to Play</button>
+            <button onclick="resetGame()" class="game-button">Reset Game</button>
+            <button onclick="toggleMode()" id="modeBtn" class="game-button">Offense</button>
+            <button onclick="showInstructions()" class="game-button">How to Play</button>
         </div>
+        <div id="message"></div>
     </div>
 
-    <!-- Instructions Modal -->
     <div id="instructionsModal" class="modal">
         <div class="modal-content">
             <h2>How to Play</h2>
@@ -49,7 +46,7 @@
                 <li>Press Enter to restart anytime</li>
             </ul>
 
-            <button id="closeInstructions">Close</button>
+            <button onclick="closeInstructions()" class="game-button">Close</button>
         </div>
     </div>
 
