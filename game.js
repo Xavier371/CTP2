@@ -27,17 +27,42 @@ function updateGameTitle() {
     }
 }
 
-// Modified to ensure points start on opposite columns
+function getRandomPosition() {
+    return {
+        x: Math.floor(Math.random() * (GRID_SIZE - 2)) + 1,
+        y: Math.floor(Math.random() * (GRID_SIZE - 2)) + 1
+    };
+}
+
+// Modified to handle starting positions based on game mode
 function initializePositions() {
-    // Blue starts on leftmost column, red on rightmost
-    bluePos = {
-        x: 0,
-        y: Math.floor(Math.random() * GRID_SIZE)
-    };
-    redPos = {
-        x: GRID_SIZE - 1,
-        y: Math.floor(Math.random() * GRID_SIZE)
-    };
+    if (gameMode === 'offense') {
+        // Blue starts on left, red on right
+        bluePos = {
+            x: 0,
+            y: Math.floor(Math.random() * GRID_SIZE)
+        };
+        redPos = {
+            x: GRID_SIZE - 1,
+            y: Math.floor(Math.random() * GRID_SIZE)
+        };
+    } else if (gameMode === 'defense') {
+        // Blue starts on right, red on left
+        bluePos = {
+            x: GRID_SIZE - 1,
+            y: Math.floor(Math.random() * GRID_SIZE)
+        };
+        redPos = {
+            x: 0,
+            y: Math.floor(Math.random() * GRID_SIZE)
+        };
+    } else {
+        // Two player mode - random positions
+        do {
+            bluePos = getRandomPosition();
+            redPos = getRandomPosition();
+        } while (getDistance(bluePos, redPos) < 3);
+    }
 }
 
 function initializeEdges() {
@@ -62,45 +87,16 @@ function initializeEdges() {
             });
         }
     }
-    
-    // Remove two random internal edges at start
+    // Remove two random edges at start
     removeInitialEdges();
 }
 
-// New function to remove two random internal edges
 function removeInitialEdges() {
-    let internalEdges = edges.filter(edge => {
-        // Check if edge is internal (not on the border)
-        return !(edge.x1 === 0 || edge.x1 === GRID_SIZE - 1 || 
-                edge.x2 === 0 || edge.x2 === GRID_SIZE - 1 ||
-                edge.y1 === 0 || edge.y1 === GRID_SIZE - 1 || 
-                edge.y2 === 0 || edge.y2 === GRID_SIZE - 1);
-    });
-    
-    // Remove two random internal edges
+    // Remove two random edges at start
     for (let i = 0; i < 2; i++) {
-        if (internalEdges.length > 0) {
-            const randomIndex = Math.floor(Math.random() * internalEdges.length);
-            const selectedEdge = internalEdges[randomIndex];
-            
-            // Find and deactivate the edge in the main edges array
-            const mainEdgeIndex = edges.findIndex(edge => 
-                edge.x1 === selectedEdge.x1 && 
-                edge.y1 === selectedEdge.y1 && 
-                edge.x2 === selectedEdge.x2 && 
-                edge.y2 === selectedEdge.y2
-            );
-            
-            if (mainEdgeIndex !== -1) {
-                edges[mainEdgeIndex].active = false;
-            }
-            
-            // Remove the selected edge from internalEdges
-            internalEdges.splice(randomIndex, 1);
-        }
+        removeRandomEdge();
     }
 }
-
 function drawGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -157,7 +153,7 @@ function isEdgeBetweenPoints(edge, pos1, pos2) {
 function removeRandomEdge() {
     const activeEdges = edges.filter(edge => {
         if (!edge.active) return false;
-        // ONLY prevent removing the edge if points are DIRECTLY ADJACENT
+        // Don't remove edge between points if they're adjacent
         if (getDistance(bluePos, redPos) === 1 && 
             isEdgeBetweenPoints(edge, bluePos, redPos)) {
             return false;
@@ -222,7 +218,6 @@ function findShortestPath(start, end) {
     
     return null;
 }
-
 function moveRedEvade() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
@@ -276,7 +271,7 @@ function checkGameOver() {
     if (!path) {
         gameOver = true;
         if (gameMode === 'offense') {
-            document.getElementById('message').textContent = 'Red Wins - Points are separated!';  // Changed this
+            document.getElementById('message').textContent = 'Red Wins - Points are separated!';
         } else if (gameMode === 'defense') {
             document.getElementById('message').textContent = 'Blue Wins - Points are separated!';
         } else {
@@ -424,10 +419,10 @@ function resetGame() {
     redTurn = true;  // Red always starts
     document.getElementById('message').textContent = '';
     
-    // Initialize edges first (includes removing two random internal edges)
+    // Initialize edges first (includes removing two random edges)
     initializeEdges();
     
-    // Initialize positions on opposite columns
+    // Initialize positions based on game mode
     initializePositions();
     
     updateGameTitle();
