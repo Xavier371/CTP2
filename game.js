@@ -289,12 +289,13 @@ function checkGameOver() {
     if (bluePos.x === redPos.x && bluePos.y === redPos.y) {
         gameOver = true;
         if (gameMode === 'offense') {
-            document.getElementById('message').textContent = 'Blue Wins - Points are joined!';
+            document.getElementById('message').textContent = 'Blue Wins - Points are joined';
         } else if (gameMode === 'defense') {
-            document.getElementById('message').textContent = 'Red Wins - Points are joined!';
+            document.getElementById('message').textContent = 'Red Wins - Points are joined';
         } else {
-            document.getElementById('message').textContent = 'Blue Wins - Points are joined!';
+            document.getElementById('message').textContent = 'Blue Wins - Points are joined';
         }
+        document.querySelector('.container').classList.add('game-over-spacing');
         return true;
     }
     
@@ -302,17 +303,20 @@ function checkGameOver() {
     if (!path) {
         gameOver = true;
         if (gameMode === 'offense') {
-            document.getElementById('message').textContent = 'Red Wins - Points are separated!';
+            document.getElementById('message').textContent = 'Red Wins - Points are separated';
         } else if (gameMode === 'defense') {
-            document.getElementById('message').textContent = 'Blue Wins - Points are separated!';
+            document.getElementById('message').textContent = 'Blue Wins - Points are separated';
         } else {
-            document.getElementById('message').textContent = 'Red Wins - Points are separated!';
+            document.getElementById('message').textContent = 'Red Wins - Points are separated';
         }
+        document.querySelector('.container').classList.add('game-over-spacing');
         return true;
     }
     
     return false;
 }
+
+
 
 function handleMove(key) {
     if (gameOver) return;
@@ -435,16 +439,20 @@ document.addEventListener('keydown', (e) => {
         return;
     }
     
+    const key = e.key.toLowerCase();
+    const arrowKeys = ['arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+    const wasdKeys = ['w', 'a', 's', 'd'];
+    
     if (gameMode === 'twoPlayer') {
-        if (redTurn && ['w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
-            handleMove(e.key.toLowerCase());
-        } else if (!redTurn && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
-            handleMove(e.key);
+        if (redTurn && wasdKeys.includes(key)) {
+            handleMove(key);
+        } else if (!redTurn && (arrowKeys.includes(key) || wasdKeys.includes(key))) {
+            handleMove(e.key); // Use original key for arrow keys
         }
     } else {
-        // Allow both WASD and arrow keys in single player
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
-            handleMove(e.key);
+        // Single player mode - allow both WASD and arrow keys
+        if (arrowKeys.includes(key) || wasdKeys.includes(key)) {
+            handleMove(e.key); // Use original key for arrow keys
         }
     }
 });
@@ -453,6 +461,7 @@ function resetGame() {
     gameOver = false;
     redTurn = true;  // Red always starts
     document.getElementById('message').textContent = '';
+    document.querySelector('.container').classList.remove('game-over-spacing');
     
     // Initialize edges first (includes removing two random edges)
     initializeEdges();
@@ -463,6 +472,9 @@ function resetGame() {
     updateGameTitle();
     drawGame();
 }
+
+// Updated event listener
+
 
 // Initialize game
 resetGame();
