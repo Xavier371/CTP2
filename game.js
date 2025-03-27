@@ -287,29 +287,42 @@ function moveRedAttack() {
 
 function isMobileDevice() {
     return (window.innerWidth <= 768) || ('ontouchstart' in window);
-}
+} 
+
 function initializeMobileControls() {
-    const buttons = {
+    const redControls = {
+        'up-btn': 'w',
+        'down-btn': 's',
+        'left-btn': 'a',
+        'right-btn': 'd'
+    };
+
+    const blueControls = {
         'up-btn': 'ArrowUp',
         'down-btn': 'ArrowDown',
         'left-btn': 'ArrowLeft',
         'right-btn': 'ArrowRight'
     };
 
-    for (const [className, key] of Object.entries(buttons)) {
-        document.querySelector(`.${className}`).addEventListener('click', () => {
+    for (const [className, _] of Object.entries(redControls)) {
+        document.querySelector(`.${className}`).addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent zoom
+            const key = gameMode === 'twoPlayer' && redTurn ? 
+                redControls[className] : blueControls[className];
             handleMove(key);
             updateMobileButtonColors();
         });
     }
 }
+
 function updateMobileButtonColors() {
     if (!isMobileDevice()) return;
     
     const buttons = document.querySelectorAll('.mobile-btn');
     if (gameMode === 'twoPlayer') {
+        const color = redTurn ? '#FF4444' : '#4169E1';
         buttons.forEach(btn => {
-            btn.style.backgroundColor = redTurn ? '#FF4444' : '#4169E1';
+            btn.style.backgroundColor = color;
         });
     } else {
         buttons.forEach(btn => {
@@ -317,6 +330,13 @@ function updateMobileButtonColors() {
         });
     }
 }
+
+// Add this to prevent any touch zooming
+document.addEventListener('touchmove', function(e) {
+    if (e.touches.length > 1) {
+        e.preventDefault();
+    }
+}, { passive: false });
 
 
 function checkGameOver() {
