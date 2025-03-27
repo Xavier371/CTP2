@@ -253,35 +253,40 @@ function moveRedEvade() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
 
-    // Calculate "electric field" direction from blue (battery) to red (electron)
-    const fieldVector = {
-        x: redPos.x - bluePos.x,
-        y: redPos.y - bluePos.y
-    };
-
-    function calculatePathFreedom(pos) {
-        // Count number of available moves in each direction up to 3 steps away
-        let freedom = 0;
-        let visited = new Set();
-        let queue = [{pos: pos, depth: 0}];
+    // Calculate pressure from blue point
+    const pressureMap = calculatePressureMap(bluePos);
+    
+    // Score moves based on inverse pressure and escape routes
+    const scoredMoves = validMoves.map(move => {
+        const key = `${move.x},${move.y}`;
+        const pressure = pressureMap[key].pressure;
+        const escapeRoutes = getValidMoves(move).length;
         
-        while (queue.length > 0) {
-            const current = queue.shift();
-            const key = `${current.pos.x},${current.pos.y}`;
-            
-            if (visited.has(key)) continue;
-            visited.add(key);
-            
-            if (current.depth < 3) {
-                const nextMoves = getValidMoves(current.pos);
-                freedom += nextMoves.length;
-                nextMoves.forEach(move => {
-                    queue.push({pos: move, depth: current.depth + 1});
-                });
-            }
-        }
-        return freedom;
-    }
+        // Calculate future mobility
+        let futureMobility = 0;
+        const futurePositions = getValidMoves(move);
+        futurePositions.forEach(pos => {
+            futureMobility += getValidMoves(pos).length;
+        });
+
+        return {
+            pos: move,
+            score: (1 - pressure) * // Lower pressure is better for evading
+                  (escapeRoutes / 4) * // More escape routes are better
+                  (1 + futureMobility / 8) // Better future mobility preferred
+        };
+    });
+
+    // Choose move with lowest pressure (furthest from blue)
+    scoredMoves.sort((a, b) => b.score - a.score);
+    
+    // Add randomization among top moves
+    const topMoves = scoredMoves.slice(0, Math.min(2, scoredMoves.length));
+    const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)];
+    
+    redPos = selectedMove.pos;
+    return true;
+}
 
     function scoreMoveWithField(move) {
         // Calculate how well this move aligns with the field direction
@@ -355,35 +360,85 @@ function moveRedEvade() {
     redPos = selectedMove.pos;
     return true;
 }
-function moveRedAttack() {
-    // Get the total number of active edges for weight calculation
-    const activeEdgeCount = edges.filter(edge => edge.active).length;
-    const edgeWeight = 1 / activeEdgeCount; // Base weight for each edge
-
-    // Run Dijkstra's algorithm with weighted edges
-    const result = dijkstraWithWeights(redPos, bluePos, edgeWeight);
+function calculatePressureMap(source) {
+    const pressureMap = {};
+    const unvisited = new Set();
     
-    if (!result || !result.nextMove) {
-        // If no path exists, move towards blue using Manhattan distance
-        const validMoves = getValidMoves(redPos);
-        if (validMoves.length === 0) return false;
-        
-        let bestMove = validMoves[0];
-        let bestDistance = getManhattanDistance(validMoves[0], bluePos);
-        
-        validMoves.forEach(move => {
-            const distance = getManhattanDistance(move, bluePos);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                bestMove = move;
-            }
-        });
-        
-        redPos = bestMove;
-        return true;
+    // Initialize pressure map
+    for (let x = 0; x < GRID_SIZE; x++) {
+        for (let y = 0; y < GRID_SIZE; y++) {
+            const key = `${x},${y}`;
+            pressureMap[key] = {
+                pressure: 0,
+                flowDirection: null
+            };
+            unvisited.add(key);
+        }
     }
 
-    redPos = result.nextMove;
+    // Set source pressure
+    pressureMap[`${source.x},${source.y}`].pressure = 1;
+
+    while (unvisited.size > 0) {
+        let currentKey = null;
+        let maxPressure = -Infinity;
+
+        unvisited.forEach(key => {
+            if (pressureMap[key].pressure > maxPressure) {
+                maxPressure = pressureMap[key].pressure;
+                currentKey = key;
+            }
+        });
+
+        if (!currentKey || maxPressure === 0) break;
+
+        const [x, y] = currentKey.split(',').map(Number);
+        const current = {x, y};
+        unvisited.delete(currentKey);
+
+        const neighbors = getValidMoves(current);
+        const pressureDrop = 1 / (neighbors.length + 1);
+
+        neighbors.forEach(neighbor => {
+            const neighborKey = `${neighbor.x},${neighbor.y}`;
+            if (!unvisited.has(neighborKey)) return;
+
+            const newPressure = maxPressure - pressureDrop;
+            if (newPressure > pressureMap[neighborKey].pressure) {
+                pressureMap[neighborKey].pressure = newPressure;
+            }
+        });
+    }
+
+    return pressureMap;
+}
+function moveRedAttack() {
+    const validMoves = getValidMoves(redPos);
+    if (validMoves.length === 0) return false;
+
+    // Calculate pressure from blue point (source)
+    const pressureMap = calculatePressureMap(bluePos);
+    
+    // Score moves based on pressure and path availability
+    const scoredMoves = validMoves.map(move => {
+        const key = `${move.x},${move.y}`;
+        const pressure = pressureMap[key].pressure;
+        const connectivity = getValidMoves(move).length;
+        
+        return {
+            pos: move,
+            score: pressure * (1 + (connectivity / 4)) // Higher pressure is better for attacking
+        };
+    });
+
+    // Choose move with highest pressure (closest to blue)
+    scoredMoves.sort((a, b) => b.score - a.score);
+    
+    // Add slight randomization among top moves
+    const topMoves = scoredMoves.slice(0, Math.min(2, scoredMoves.length));
+    const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)];
+    
+    redPos = selectedMove.pos;
     return true;
 }
 
