@@ -1,17 +1,28 @@
 body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
     margin: 0;
+    padding: 0;
     background-color: #f0f0f0;
     font-family: Arial, sans-serif;
     touch-action: manipulation;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.rotate-prompt {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    text-align: center;
+    padding: 20px;
 }
 
 .container {
     text-align: center;
-    margin-top: -5vh;
 }
 
 h1 {
@@ -24,36 +35,20 @@ h1 {
     color: #333;
     margin-bottom: 8px;
     text-align: center;
-    min-height: 36px;
 }
 
 #message {
     font-size: 24px;
     color: #333;
-    margin: 0;
+    margin: 10px 0;
     font-weight: normal;
     text-decoration: underline;
-    text-align: center;
-    height: 36px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    visibility: hidden;
-}
-
-#message:not(:empty) {
-    opacity: 1;
-    visibility: visible;
 }
 
 canvas {
     background-color: white;
     border: 2px solid #333;
     border-radius: 5px;
-    margin: 20px 0;
-}
-
-.controls {
-    margin-bottom: 15px;
 }
 
 .game-button {
@@ -62,7 +57,7 @@ canvas {
     padding: 10px 20px;
     border: none;
     border-radius: 5px;
-    margin: 0 5px;
+    margin: 5px;
     cursor: pointer;
     font-size: 16px;
     transition: background-color 0.3s;
@@ -70,22 +65,6 @@ canvas {
 
 .game-button:hover {
     background-color: #45a049;
-}
-
-/* Mobile Controls */
-.mobile-controls {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-    margin: 20px auto;
-    width: fit-content;
-}
-
-.middle-row {
-    display: flex;
-    gap: 60px;
-    justify-content: center;
 }
 
 .mobile-btn {
@@ -114,6 +93,124 @@ canvas {
     transform: rotate(-45deg);
     display: inline-block;
     user-select: none;
+}
+
+.middle-row {
+    display: flex;
+    gap: 60px;
+    justify-content: center;
+}
+
+/* Desktop Styles */
+@media (min-width: 769px) {
+    .container {
+        margin-top: 5vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .mobile-controls {
+        display: none !important;
+    }
+
+    canvas {
+        margin: 20px 0;
+    }
+
+    .top-controls {
+        margin-top: 20px;
+    }
+}
+
+/* Mobile Landscape Styles */
+@media (max-width: 768px) and (orientation: landscape) {
+    body {
+        margin: 0;
+        overflow: hidden;
+    }
+
+    .container {
+        margin: 0;
+        display: flex;
+        flex-direction: row;
+        width: 100vw;
+        height: 100vh;
+    }
+
+    .left-section {
+        width: 25%;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .center-section {
+        width: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .right-section {
+        width: 25%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 20px;
+    }
+
+    .top-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .mobile-controls {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    h1 {
+        font-size: 20px;
+        margin: 0 0 10px 0;
+    }
+
+    .game-title {
+        font-size: 16px;
+        margin: 5px 0;
+    }
+
+    #message {
+        font-size: 18px;
+        margin: 5px 0;
+    }
+
+    .game-button {
+        font-size: 14px;
+        padding: 8px 12px;
+        margin: 2px;
+    }
+
+    canvas {
+        max-width: 100%;
+        max-height: 90vh;
+    }
+}
+
+/* Portrait warning */
+@media (max-width: 768px) and (orientation: portrait) {
+    .container {
+        display: none;
+    }
+    .rotate-prompt {
+        display: block;
+    }
 }
 
 /* Modal Styles */
@@ -173,82 +270,4 @@ canvas {
 .modal-content button {
     display: block;
     margin: 20px auto 0;
-}
-
-/* Mobile Responsive Styles */
-@media (max-width: 768px) {
-    body {
-        height: auto;
-        padding: 10px 0;
-    }
-
-    .container {
-        margin-top: 0;
-        padding: 0 10px;
-        display: flex;
-        flex-direction: column;
-    }
-
-    h1 {
-        font-size: 24px;
-        margin: 5px 0;
-    }
-
-    .game-title {
-        font-size: 16px;
-        min-height: 24px;
-        margin: 5px 0;
-    }
-
-    #message {
-        font-size: 18px;
-        height: 24px;
-    }
-
-    /* Reorder elements for mobile */
-    .container > * {
-        order: 2;
-    }
-
-    .controls {
-        order: 1;
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        margin: 5px 0 10px 0;
-    }
-
-    .game-button {
-        font-size: 14px;
-        padding: 8px 12px;
-        margin: 0;
-    }
-
-    canvas {
-        margin: 10px 0;
-        max-width: 100%;
-        height: auto;
-    }
-
-    .mobile-controls {
-        display: flex;
-        order: 3;
-    }
-
-    .modal-content {
-        width: 90%;
-        margin: 5% auto;
-        padding: 15px;
-    }
-}
-
-/* Desktop-specific styling */
-@media (min-width: 769px) {
-    .controls {
-        margin-top: 20px;
-    }
-    
-    .mobile-controls {
-        display: none !important;
-    }
 }
