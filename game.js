@@ -285,6 +285,39 @@ function moveRedAttack() {
     return true;
 }
 
+function isMobileDevice() {
+    return (window.innerWidth <= 768) || ('ontouchstart' in window);
+}
+function initializeMobileControls() {
+    const buttons = {
+        'up-btn': 'ArrowUp',
+        'down-btn': 'ArrowDown',
+        'left-btn': 'ArrowLeft',
+        'right-btn': 'ArrowRight'
+    };
+
+    for (const [className, key] of Object.entries(buttons)) {
+        document.querySelector(`.${className}`).addEventListener('click', () => {
+            handleMove(key);
+            updateMobileButtonColors();
+        });
+    }
+}
+function updateMobileButtonColors() {
+    if (!isMobileDevice()) return;
+    
+    const buttons = document.querySelectorAll('.mobile-btn');
+    if (gameMode === 'twoPlayer') {
+        buttons.forEach(btn => {
+            btn.style.backgroundColor = redTurn ? '#FF4444' : '#4169E1';
+        });
+    } else {
+        buttons.forEach(btn => {
+            btn.style.backgroundColor = '#4169E1';
+        });
+    }
+}
+
 
 function checkGameOver() {
     if (bluePos.x === redPos.x && bluePos.y === redPos.y) {
@@ -459,7 +492,15 @@ function resetGame() {
     
     updateGameTitle();
     drawGame();
+    updateMobileButtonColors();
+
 }
 
 // Initialize game
 resetGame();
+
+// Initialize mobile controls if needed
+if (isMobileDevice()) {
+    initializeMobileControls();
+    updateMobileButtonColors();
+}
