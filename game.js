@@ -1,7 +1,7 @@
 const GRID_SIZE = 6;
-const CELL_SIZE = 80;
+let CELL_SIZE = 80; // Changed to let since it will be updated
+let POINT_OFFSET = CELL_SIZE / 2; // Changed to let
 const POINT_RADIUS = 8;
-const POINT_OFFSET = CELL_SIZE / 2;
 
 let canvas = document.getElementById('gameCanvas');
 let ctx = canvas.getContext('2d');
@@ -16,6 +16,24 @@ let gameOver = false;
 let gameMode = 'offense'; // 'offense', 'defense', or 'twoPlayer'
 let redTurn = true; // Red always moves first
 
+function resizeCanvas() {
+    const container = document.querySelector('.center-section');
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    
+    // Calculate the maximum size that maintains the square aspect ratio
+    const size = Math.min(containerWidth, containerHeight) - 20; // 20px margin
+    
+    canvas.width = size;
+    canvas.height = size;
+    CELL_SIZE = size / GRID_SIZE;
+    POINT_OFFSET = CELL_SIZE / 2;
+    
+    drawGame(); // Redraw after resize
+}
+
+// Add resize listener
+window.addEventListener('resize', resizeCanvas);
 function updateGameTitle() {
     const title = document.getElementById('gameTitle');
     if (gameMode === 'offense') {
