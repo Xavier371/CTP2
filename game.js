@@ -180,6 +180,111 @@ function isEdgeBetweenPoints(edge, pos1, pos2) {
         (edge.x2 === pos1.x && edge.y2 === pos1.y && edge.x1 === pos2.x && edge.y1 === pos2.y)
     );
 }
+function countCriticalEdges(pos) {
+    const moves = getValidMoves(pos);
+    let criticalCount = 0;
+    
+    moves.forEach(move => {
+        // Simulate removing the edge to this move
+        const remainingMoves = getValidMovesAfterEdgeRemoval(pos, move);
+        if (remainingMoves.length <= 1) criticalCount++;
+    });
+    
+    return criticalCount;
+}
+
+function getValidMovesAfterEdgeRemoval(pos, removedMove) {
+    // Create a copy of edges with the specific edge removed
+    const edgeCopy = edges.map(edge => ({...edge}));
+    const removedEdge = edgeCopy.find(edge => 
+        (edge.x1 === pos.x && edge.y1 === pos.y && edge.x2 === removedMove.x && edge.y2 === removedMove.y) ||
+        (edge.x2 === pos.x && edge.y2 === pos.y && edge.x1 === removedMove.x && edge.y1 === removedMove.y)
+    );
+    
+    if (removedEdge) {
+        removedEdge.active = false;
+    }
+
+    // Get valid moves with the simulated edge removal
+    return getValidMovesWithEdges(pos, edgeCopy);
+}
+
+function getValidMovesWithEdges(pos, edgeSet) {
+    const moves = [];
+    const directions = [
+        { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
+        { dx: 0, dy: -1 }, { dx: 0, dy: 1 }
+    ];
+
+    directions.forEach(dir => {
+        const newPos = { x: pos.x + dir.dx, y: pos.y + dir.dy };
+        if (newPos.x >= 0 && newPos.x < GRID_SIZE && 
+            newPos.y >= 0 && newPos.y < GRID_SIZE && 
+            canMoveWithEdges(pos, newPos, edgeSet)) {
+            moves.push(newPos);
+        }
+    });
+    return moves;
+}
+
+function canMoveWithEdges(from, to, edgeSet) {
+    return edgeSet.some(edge => 
+        edge.active && 
+        ((edge.x1 === from.x && edge.y1 === from.y && edge.x2 === to.x && edge.y2 === to.y) ||
+         (edge.x2 === from.x && edge.y2 === from.y && edge.x1 === to.x && edge.y1 === to.y))
+    );
+}
+
+function calculatePositionScore(pos, isEvading = false) {
+    let score = 0;
+    
+    // Edge proximity score
+    if (pos.x === 0 || pos.x === GRID_SIZE-1) score += isEvading ? 2 : -1;
+    if (pos.y === 0 || pos.y === GRID_SIZE-1) score += isEvading ? 2 : -1;
+    
+    // Center control score
+    const centerDistance = Math.abs(pos.x - GRID_SIZE/2) + Math.abs(pos.y - GRID_SIZE/2);
+    score += isEvading ? -centerDistance : (GRID_SIZE - centerDistance);
+    
+    // Mobility score
+    const availableMoves = getValidMoves(pos).length;
+    score += isEvading ? (availableMoves * 2) : availableMoves;
+    
+    return score;
+}
+
+function canCreatePincer(move, targetPos) {
+    // Check diagonal and two-step straight line positions
+    const dx = Math.abs(move.x - targetPos.x);
+    const dy = Math.abs(move.y - targetPos.y);
+    
+    // Diagonal or L-shaped trapping positions
+    if ((dx === 1 && dy === 1) || (dx === 2 && dy === 0) || (dx === 0 && dy === 2)) {
+        // Verify there are active edges to support this trap
+        const intermediatePositions = getIntermediatePositions(move, targetPos);
+        return intermediatePositions.every(pos => 
+            getValidMoves(pos).length > 0
+        );
+    }
+    return false;
+}
+
+function getIntermediatePositions(pos1, pos2) {
+    const positions = [];
+    const dx = pos2.x - pos1.x;
+    const dy = pos2.y - pos1.y;
+    
+    if (Math.abs(dx) === 2) {
+        positions.push({ x: pos1.x + dx/2, y: pos1.y });
+    } else if (Math.abs(dy) === 2) {
+        positions.push({ x: pos1.x, y: pos1.y + dy/2 });
+    } else if (Math.abs(dx) === 1 && Math.abs(dy) === 1) {
+        positions.push({ x: pos1.x, y: pos2.y });
+        positions.push({ x: pos2.x, y: pos1.y });
+    }
+    
+    return positions;
+}
 
 function removeRandomEdge() {
     const activeEdges = edges.filter(edge => {
