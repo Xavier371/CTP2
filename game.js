@@ -1,48 +1,21 @@
 const GRID_SIZE = 6;
-let CELL_SIZE = 80; // Changed to let since it will be updated
-let POINT_OFFSET = CELL_SIZE / 2; // Changed to let
+const CELL_SIZE = 80;
 const POINT_RADIUS = 8;
+const POINT_OFFSET = CELL_SIZE / 2;
 
 let canvas = document.getElementById('gameCanvas');
 let ctx = canvas.getContext('2d');
 
-// Initialize canvas size
-resizeCanvas();
+canvas.width = CELL_SIZE * GRID_SIZE;
+canvas.height = CELL_SIZE * GRID_SIZE;
 
 let bluePos = { x: 0, y: GRID_SIZE - 1 };
 let redPos = { x: GRID_SIZE - 1, y: 0 };
 let edges = [];
 let gameOver = false;
-let gameMode = 'offense';
-let redTurn = true;
+let gameMode = 'offense'; // 'offense', 'defense', or 'twoPlayer'
+let redTurn = true; // Red always moves first
 
-document.addEventListener('DOMContentLoaded', function() {
-    resizeCanvas();
-    resetGame();
-    if (isMobileDevice()) {
-        initializeMobileControls();
-        updateMobileButtonColors();
-    }
-});
-
-function resizeCanvas() {
-    const container = document.querySelector('.center-section');
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-    
-    // Calculate the maximum size that maintains the square aspect ratio
-    const size = Math.min(containerWidth, containerHeight) - 20; // 20px margin
-    
-    canvas.width = size;
-    canvas.height = size;
-    CELL_SIZE = size / GRID_SIZE;
-    POINT_OFFSET = CELL_SIZE / 2;
-    
-    drawGame(); // Redraw after resize
-}
-
-// Add resize listener
-window.addEventListener('resize', resizeCanvas);
 function updateGameTitle() {
     const title = document.getElementById('gameTitle');
     if (gameMode === 'offense') {
@@ -276,226 +249,90 @@ function findShortestPath(start, end) {
     
     return null;
 }
-function calculatePressureMap(source) {
-    const pressureMap = {};
-    const unvisited = new Set();
-    
-    // Initialize pressure map
-    for (let x = 0; x < GRID_SIZE; x++) {
-        for (let y = 0; y < GRID_SIZE; y++) {
-            const key = `${x},${y}`;
-            pressureMap[key] = {
-                pressure: 0,
-                flowDirection: null
-            };
-            unvisited.add(key);
-        }
-    }
 
-    // Set source pressure
-    pressureMap[`${source.x},${source.y}`].pressure = 1;
 
-    while (unvisited.size > 0) {
-        let currentKey = null;
-        let maxPressure = -Infinity;
+// Add these constants at the top with your other constants
+const ATTACK_FORCE = 1.5;
+const EVADE_FORCE = 1.2;
 
-        unvisited.forEach(key => {
-            if (pressureMap[key].pressure > maxPressure) {
-                maxPressure = pressureMap[key].pressure;
-                currentKey = key;
-            }
-        });
-
-        if (!currentKey || maxPressure === 0) break;
-
-        const [x, y] = currentKey.split(',').map(Number);
-        const current = {x, y};
-        unvisited.delete(currentKey);
-
-        const neighbors = getValidMoves(current);
-        const pressureDrop = 1 / (neighbors.length + 1);
-
-        neighbors.forEach(neighbor => {
-            const neighborKey = `${neighbor.x},${neighbor.y}`;
-            if (!unvisited.has(neighborKey)) return;
-
-            const newPressure = maxPressure - pressureDrop;
-            if (newPressure > pressureMap[neighborKey].pressure) {
-                pressureMap[neighborKey].pressure = newPressure;
-            }
-        });
-    }
-
-    return pressureMap;
-}
-function moveRedEvade() {
-    const validMoves = getValidMoves(redPos);
-    if (validMoves.length === 0) return false;
-
-    // Check if blue is adjacent and could force a crossing
-    const isAdjacentToBlue = Math.abs(bluePos.x - redPos.x) + Math.abs(bluePos.y - redPos.y) === 1;
-    
-    if (isAdjacentToBlue) {
-        // Get blue's possible next moves
-        const blueMoves = getValidMoves(bluePos);
-        
-        // Find moves that avoid crossing paths with blue's potential moves
-        const safeMoves = validMoves.filter(move => {
-            // Check if this move would allow blue to force a crossing
-            const wouldCross = blueMoves.some(blueMove => {
-                // If blue and red would end up switching positions, it's a crossing
-                return blueMove.x === redPos.x && blueMove.y === redPos.y &&
-                       move.x === bluePos.x && move.y === bluePos.y;
-            });
-            return !wouldCross;
-        });
-
-        // If there are safe moves, use only those
-        if (safeMoves.length > 0) {
-            // Score safe moves based on escape potential
-            const scoredMoves = safeMoves.map(move => {
-                const escapeRoutes = getValidMoves(move).length;
-                const distanceFromBlue = Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y);
-                return {
-                    pos: move,
-                    score: escapeRoutes + distanceFromBlue
-                };
-            });
-            
-            // Choose the best safe move
-            scoredMoves.sort((a, b) => b.score - a.score);
-            redPos = scoredMoves[0].pos;
-            return true;
-        }
-    }
-
-    // If not adjacent or no safe moves, use regular evade logic
-    const pressureMap = calculatePressureMap(bluePos);
-    
-    const scoredMoves = validMoves.map(move => {
-        const key = `${move.x},${move.y}`;
-        const pressure = pressureMap[key].pressure;
-        const escapeRoutes = getValidMoves(move).length;
-        
-        // Calculate future mobility
-        let futureMobility = 0;
-        const futurePositions = getValidMoves(move);
-        futurePositions.forEach(pos => {
-            futureMobility += getValidMoves(pos).length;
-        });
-
-        // Heavily penalize moves that could lead to crossing paths
-        const couldLeadToCrossing = Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y) === 1;
-        const crossingPenalty = couldLeadToCrossing ? 0.5 : 1;
-
-        return {
-            pos: move,
-            score: ((1 - pressure) * // Lower pressure is better for evading
-                   (escapeRoutes / 4) * // More escape routes are better
-                   (1 + futureMobility / 8) * // Better future mobility preferred
-                   crossingPenalty) // Penalize moves that could lead to crossing
-        };
-    });
-
-    // Choose move with highest score
-    scoredMoves.sort((a, b) => b.score - a.score);
-    
-    // Add some randomization among top moves to avoid predictability
-    const topMoves = scoredMoves.slice(0, Math.min(2, scoredMoves.length));
-    const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)];
-    
-    redPos = selectedMove.pos;
-    return true;
-}
 function moveRedAttack() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
 
-    // Calculate pressure from blue point (source)
-    const pressureMap = calculatePressureMap(bluePos);
+    // Calculate shortest path to blue
+    const pathToBlue = findShortestPath(redPos, bluePos);
     
-    // Score moves based on pressure and path availability
+    // Score each possible move
     const scoredMoves = validMoves.map(move => {
-        const key = `${move.x},${move.y}`;
-        const pressure = pressureMap[key].pressure;
-        const connectivity = getValidMoves(move).length;
+        // Base attraction force (like electromagnetic attraction)
+        const dx = bluePos.x - move.x;
+        const dy = bluePos.y - move.y;
+        const distance = Math.abs(dx) + Math.abs(dy);
+        const attractionForce = ATTACK_FORCE / (distance || 0.1);
         
+        // Path analysis
+        const pathFromMove = findShortestPath(move, bluePos);
+        const pathScore = pathFromMove ? 1 / pathFromMove.length : 0;
+        
+        // Connectivity score (prefer positions with more options)
+        const connectivity = getValidMoves(move).length / 4;
+        
+        // If this move is along the shortest path to blue, give it a bonus
+        const isOnShortestPath = pathToBlue && pathToBlue.length > 1 && 
+            pathToBlue[1].x === move.x && pathToBlue[1].y === move.y;
+        const pathBonus = isOnShortestPath ? 2 : 0;
+
         return {
-            pos: move,
-            score: pressure * (1 + (connectivity / 4)) // Higher pressure is better for attacking
+            move,
+            score: attractionForce + pathScore + connectivity + pathBonus
         };
     });
 
-    // Choose move with highest pressure (closest to blue)
+    // Choose the move with the highest score
     scoredMoves.sort((a, b) => b.score - a.score);
-    
-    // Add slight randomization among top moves
-    const topMoves = scoredMoves.slice(0, Math.min(2, scoredMoves.length));
-    const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)];
-    
-    redPos = selectedMove.pos;
+    redPos = scoredMoves[0].move;
     return true;
 }
 
-function isMobileDevice() {
-    return (window.innerWidth <= 768) || ('ontouchstart' in window);
-} 
+function moveRedEvade() {
+    const validMoves = getValidMoves(redPos);
+    if (validMoves.length === 0) return false;
 
-function initializeMobileControls() {
-    const redControls = {
-        'up-btn': 'w',
-        'down-btn': 's',
-        'left-btn': 'a',
-        'right-btn': 'd'
-    };
+    // Score each possible move
+    const scoredMoves = validMoves.map(move => {
+        // Base repulsion force (like electromagnetic repulsion)
+        const dx = bluePos.x - move.x;
+        const dy = bluePos.y - move.y;
+        const distance = Math.abs(dx) + Math.abs(dy);
+        const repulsionForce = EVADE_FORCE * distance;
+        
+        // Connectivity analysis (prefer positions with more escape routes)
+        const escapeRoutes = getValidMoves(move).length;
+        const connectivityScore = escapeRoutes * 0.8;
+        
+        // Edge proximity bonus (being near edges provides more escape options)
+        const edgeProximity = (move.x === 0 || move.x === GRID_SIZE - 1 || 
+                              move.y === 0 || move.y === GRID_SIZE - 1) ? 1.5 : 0;
+        
+        // Penalty for moves that could lead to being trapped
+        const pathsFromMove = findShortestPath(move, bluePos);
+        const trapPenalty = pathsFromMove ? 0 : -5;
+        
+        // Emergency escape bonus if blue is adjacent
+        const isAdjacentToBlue = Math.abs(bluePos.x - move.x) + Math.abs(bluePos.y - move.y) === 1;
+        const emergencyBonus = isAdjacentToBlue ? -3 : 0;
 
-    const blueControls = {
-        'up-btn': 'ArrowUp',
-        'down-btn': 'ArrowDown',
-        'left-btn': 'ArrowLeft',
-        'right-btn': 'ArrowRight'
-    };
+        return {
+            move,
+            score: repulsionForce + connectivityScore + edgeProximity + trapPenalty + emergencyBonus
+        };
+    });
 
-    for (const [className, _] of Object.entries(redControls)) {
-        document.querySelector(`.${className}`).addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Prevent zoom
-            const key = gameMode === 'twoPlayer' && redTurn ? 
-                redControls[className] : blueControls[className];
-            handleMove(key);
-            updateMobileButtonColors();
-        });
-    }
+    // Choose the move with the highest score
+    scoredMoves.sort((a, b) => b.score - a.score);
+    redPos = scoredMoves[0].move;
+    return true;
 }
-
-function updateMobileButtonColors() {
-    if (!isMobileDevice()) return;
-    
-    const buttons = document.querySelectorAll('.mobile-btn');
-    if (gameMode === 'twoPlayer') {
-        const color = redTurn ? '#FF4444' : '#4169E1';
-        buttons.forEach(btn => {
-            btn.style.backgroundColor = color;
-        });
-    } else {
-        buttons.forEach(btn => {
-            btn.style.backgroundColor = '#4169E1';
-        });
-    }
-}
-document.addEventListener('DOMContentLoaded', function() {
-    // Move your initialization code here
-    resetGame();
-    if (isMobileDevice()) {
-        initializeMobileControls();
-        updateMobileButtonColors();
-    }
-});
-// Add this to prevent any touch zooming
-document.addEventListener('touchmove', function(e) {
-    if (e.touches.length > 1) {
-        e.preventDefault();
-    }
-}, { passive: false });
 
 
 function checkGameOver() {
@@ -671,15 +508,7 @@ function resetGame() {
     
     updateGameTitle();
     drawGame();
-    updateMobileButtonColors();
-
 }
 
 // Initialize game
 resetGame();
-
-// Initialize mobile controls if needed
-if (isMobileDevice()) {
-    initializeMobileControls();
-    updateMobileButtonColors();
-}
