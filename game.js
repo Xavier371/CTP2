@@ -295,39 +295,118 @@ function moveRedAttack() {
     return true;
 }
 
+// Add these constants at the top
+const BLUE_CHARGE = -2;  // Blue point has 2x charge
+const CORNER_CHARGE = -1; // Corners and dead ends have 1x charge
+
+// New helper functions
+function findCornerPoints() {
+    const corners = [
+        { x: 0, y: 0 },
+        { x: 0, y: GRID_SIZE - 1 },
+        { x: GRID_SIZE - 1, y: 0 },
+        { x: GRID_SIZE - 1, y: GRID_SIZE - 1 }
+    ];
+    // Only return corners that are accessible via valid moves
+    return corners.filter(corner => findShortestPath(corner, redPos) !== null);
+}
+
+function findDeadEndPoints() {
+    const deadEnds = [];
+    // Check each grid position
+    for (let x = 0; x < GRID_SIZE; x++) {
+        for (let y = 0; y < GRID_SIZE; y++) {
+            const pos = { x, y };
+            // Skip if it's red, blue, or a corner
+            if ((pos.x === redPos.x && pos.y === redPos.y) ||
+                (pos.x === bluePos.x && pos.y === bluePos.y) ||
+                isCorner(pos)) continue;
+            
+            // If position has only one valid move, it's a dead end
+            if (getValidMoves(pos).length === 1) {
+                deadEnds.push(pos);
+            }
+        }
+    }
+    return deadEnds;
+}
+
+function isCorner(pos) {
+    return (pos.x === 0 || pos.x === GRID_SIZE - 1) && 
+           (pos.y === 0 || pos.y === GRID_SIZE - 1);
+}
+
+function calculateDirectionalForces(redPos) {
+    const forces = {
+        up: 0,
+        down: 0,
+        left: 0,
+        right: 0
+    };
+
+    // Calculate force from blue point
+    const bluePath = findShortestPath(bluePos, redPos);
+    if (bluePath) {
+        addDirectionalForce(forces, bluePath, BLUE_CHARGE);
+    }
+
+    // Calculate forces from corners
+    findCornerPoints().forEach(corner => {
+        const path = findShortestPath(corner, redPos);
+        if (path) {
+            addDirectionalForce(forces, path, CORNER_CHARGE);
+        }
+    });
+
+    // Calculate forces from dead ends
+    findDeadEndPoints().forEach(deadEnd => {
+        const path = findShortestPath(deadEnd, redPos);
+        if (path) {
+            addDirectionalForce(forces, path, CORNER_CHARGE);
+        }
+    });
+
+    return forces;
+}
+
+function addDirectionalForce(forces, path, charge) {
+    if (path.length < 2) return;
+    
+    // Get direction from first step of path
+    const start = path[path.length - 1]; // red's position
+    const next = path[path.length - 2];  // step before red's position
+    
+    // Calculate force magnitude (stronger for shorter paths)
+    const forceMagnitude = charge / (path.length - 1);
+    
+    // Add force to appropriate direction
+    if (next.x < start.x) forces.left += forceMagnitude;
+    if (next.x > start.x) forces.right += forceMagnitude;
+    if (next.y < start.y) forces.up += forceMagnitude;
+    if (next.y > start.y) forces.down += forceMagnitude;
+}
+
+// Modified moveRedEvade function
 function moveRedEvade() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
 
-    // Score each possible move
+    // Calculate forces for current position
+    const forces = calculateDirectionalForces(redPos);
+    
+    // Score each possible move based on how it responds to the forces
     const scoredMoves = validMoves.map(move => {
         let score = 0;
-
-        // Base repulsion force (like same charge repulsion)
-        const distance = Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y);
-        score += EVADE_FORCE * distance;
-
-        // Emergency escape if blue is adjacent
-        const isAdjacentToBlue = Math.abs(bluePos.x - move.x) + Math.abs(bluePos.y - move.y) === 1;
-        if (isAdjacentToBlue) {
-            score -= 10; // Strong penalty for being adjacent
-        }
-
-        // Check escape routes
+        
+        // Move in direction of net force
+        if (move.x < redPos.x) score += forces.left;
+        if (move.x > redPos.x) score += forces.right;
+        if (move.y < redPos.y) score += forces.up;
+        if (move.y > redPos.y) score += forces.down;
+        
+        // Add small bonus for moves with more escape routes
         const escapeRoutes = getValidMoves(move).length;
-        score += escapeRoutes * 2; // Strongly prefer positions with more escape routes
-
-        // Edge proximity bonus
-        if (move.x === 0 || move.x === GRID_SIZE - 1 || 
-            move.y === 0 || move.y === GRID_SIZE - 1) {
-            score += 3; // Bonus for being on an edge
-        }
-
-        // Check if move maintains path to border
-        const pathToBorder = findPathToBorder(move);
-        if (pathToBorder) {
-            score += 4; // Strong bonus for maintaining escape route to border
-        }
+        score += escapeRoutes * 0.1;
 
         return { move, score };
     });
@@ -338,34 +417,6 @@ function moveRedEvade() {
     return true;
 }
 
-// Helper function for evade
-function findPathToBorder(pos) {
-    const visited = new Set();
-    const queue = [[pos]];
-    
-    while (queue.length > 0) {
-        const path = queue.shift();
-        const current = path[path.length - 1];
-        
-        if (current.x === 0 || current.x === GRID_SIZE - 1 || 
-            current.y === 0 || current.y === GRID_SIZE - 1) {
-            return path;
-        }
-        
-        const key = `${current.x},${current.y}`;
-        if (visited.has(key)) continue;
-        
-        visited.add(key);
-        const moves = getValidMoves(current);
-        moves.forEach(move => {
-            if (!visited.has(`${move.x},${move.y}`)) {
-                queue.push([...path, move]);
-            }
-        });
-    }
-    
-    return null;
-}
 
 function isMobileDevice() {
     return (window.innerWidth <= 768) || ('ontouchstart' in window);
