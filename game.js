@@ -509,14 +509,20 @@ function handleMove(key) {
         }
 
         if (canMove(oldPos, bluePos)) {
-            removeRandomEdge();
+            // First check if game is over after blue's move
             if (!checkGameOver()) {
+                // Calculate red's move based on current edge configuration
                 if (gameMode === 'offense') {
                     moveRedEvade();
                 } else {
                     moveRedAttack();
                 }
+                
+                // Remove two edges after both moves are decided
                 removeRandomEdge();
+                removeRandomEdge();
+                
+                // Check final game state
                 checkGameOver();
             }
         } else {
