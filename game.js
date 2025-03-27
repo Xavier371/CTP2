@@ -284,30 +284,101 @@ function moveRedEvade() {
 }
 
 function moveRedAttack() {
-    // 1. Get all points exactly 2 moves from blue
-    const twoMovePoints = findPointsTwoMovesAway(bluePos);
+    // Get shortest path using Dijkstra's
+    const { path, distances } = dijkstra(redPos, bluePos);
     
-    // 2. If we found trap points, move towards closest one
-    if (twoMovePoints.length > 0) {
-        // Find the trap point closest to red's current position
-        const closestTrapPoint = findClosestPoint(redPos, twoMovePoints);
-        
-        // Get valid moves towards this trap point
-        const bestMove = getBestMoveTowards(redPos, closestTrapPoint);
-        if (bestMove) {
-            redPos = bestMove;
-            return true;
-        }
-    }
-    
-    // 3. Fallback: Move towards blue using shortest path
-    const path = findShortestPath(redPos, bluePos);
     if (path && path.length > 1) {
+        // Move to the next position in the shortest path
         redPos = path[1];
         return true;
     }
     
+    // If no path exists, try to move closer using Manhattan distance
+    const validMoves = getValidMoves(redPos);
+    if (validMoves.length > 0) {
+        const bestMove = validMoves.reduce((best, move) => {
+            const currentDist = getManhattanDistance(move, bluePos);
+            const bestDist = getManhattanDistance(best, bluePos);
+            return currentDist < bestDist ? move : best;
+        }, validMoves[0]);
+        
+        redPos = bestMove;
+        return true;
+    }
+    
     return false;
+}
+function dijkstra(start, end) {
+    const distances = {};
+    const previous = {};
+    const unvisited = new Set();
+    
+    // Initialize distances
+    for (let x = 0; x < GRID_SIZE; x++) {
+        for (let y = 0; y < GRID_SIZE; y++) {
+            const key = `${x},${y}`;
+            distances[key] = Infinity;
+            unvisited.add(key);
+        }
+    }
+    
+    // Set start distance to 0
+    distances[`${start.x},${start.y}`] = 0;
+    
+    while (unvisited.size > 0) {
+        // Find unvisited node with smallest distance
+        let current = null;
+        let smallestDistance = Infinity;
+        
+        for (const key of unvisited) {
+            if (distances[key] < smallestDistance) {
+                smallestDistance = distances[key];
+                current = key;
+            }
+        }
+        
+        if (current === null || distances[current] === Infinity) break;
+        
+        // Remove current from unvisited
+        unvisited.delete(current);
+        
+        // If we reached the end, break
+        if (current === `${end.x},${end.y}`) break;
+        
+        // Get current coordinates
+        const [x, y] = current.split(',').map(Number);
+        const currentPos = { x, y };
+        
+        // Check neighbors
+        const neighbors = getValidMoves(currentPos);
+        
+        for (const neighbor of neighbors) {
+            const neighborKey = `${neighbor.x},${neighbor.y}`;
+            if (!unvisited.has(neighborKey)) continue;
+            
+            const distance = distances[current] + 1; // Edge weight is 1
+            
+            if (distance < distances[neighborKey]) {
+                distances[neighborKey] = distance;
+                previous[neighborKey] = current;
+            }
+        }
+    }
+    
+    // Reconstruct path
+    const path = [];
+    let current = `${end.x},${end.y}`;
+    
+    while (current) {
+        const [x, y] = current.split(',').map(Number);
+        path.unshift({ x, y });
+        current = previous[current];
+    }
+    
+    return {
+        path: path.length > 1 ? path : null,
+        distances
+    };
 }
 
 function findPointsTwoMovesAway(startPos) {
