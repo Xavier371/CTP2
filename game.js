@@ -250,32 +250,60 @@ function findShortestPath(start, end) {
     return null;
 }
 function moveRedEvade() {
+    // Calculate repulsion costs and potential moves
+    function calculateRepulsionScore(pos) {
+        // Distance from blue point (Manhattan distance for grid-based movement)
+        const dx = pos.x - bluePos.x;
+        const dy = pos.y - bluePos.y;
+        const distance = Math.abs(dx) + Math.abs(dy);
+        
+        // Base repulsion score (inverse square law inspired)
+        const baseScore = distance === 0 ? Infinity : 1 / (distance * distance);
+        
+        // Additional factors
+        const edgeProximity = countActiveEdgesAround(pos);
+        const isCorner = (pos.x === 0 || pos.x === GRID_SIZE - 1) && 
+                        (pos.y === 0 || pos.y === GRID_SIZE - 1);
+        
+        // Combine factors into final score
+        return {
+            pos: pos,
+            score: baseScore * (1 + edgeProximity/4) * (isCorner ? 0.5 : 1)
+        };
+    }
+
+    function countActiveEdgesAround(pos) {
+        return getValidMoves(pos).length;
+    }
+
+    // Get all valid moves
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
 
-    const isAdjacentToBlue = Math.abs(bluePos.x - redPos.x) + Math.abs(bluePos.y - redPos.y) === 1;
+    // Calculate scores for each possible move
+    const scoredMoves = validMoves.map(move => {
+        const repulsionScore = calculateRepulsionScore(move);
+        
+        // Simulate edge removal impact
+        const futureMovesCount = getValidMoves(move).length;
+        
+        // Final move score combines multiple factors
+        return {
+            pos: move,
+            score: repulsionScore.score * (futureMovesCount / 4)
+        };
+    });
 
-    if (isAdjacentToBlue) {
-        const escapeMoves = validMoves.filter(move => 
-            Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y) > 1
-        );
-        if (escapeMoves.length > 0) {
-            redPos = escapeMoves[Math.floor(Math.random() * escapeMoves.length)];
-            return true;
-        }
-    }
-
-    // Score moves based on distance from blue
-    const scoredMoves = validMoves.map(move => ({
-        move,
-        score: Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y)
-    }));
-
-    scoredMoves.sort((a, b) => b.score - a.score);
-    redPos = scoredMoves[0].move;
+    // Choose the move with the lowest repulsion score (best escape route)
+    scoredMoves.sort((a, b) => a.score - b.score);
+    
+    // Add some randomness to avoid predictable patterns
+    const topMoves = scoredMoves.slice(0, Math.min(3, scoredMoves.length));
+    const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)];
+    
+    redPos = selectedMove.pos;
     return true;
 }
-
 function moveRedAttack() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
