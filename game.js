@@ -356,80 +356,114 @@ function moveRedEvade() {
     return true;
 }
 function moveRedAttack() {
-    const validMoves = getValidMoves(redPos);
-    if (validMoves.length === 0) return false;
+    // Get the total number of active edges for weight calculation
+    const activeEdgeCount = edges.filter(edge => edge.active).length;
+    const edgeWeight = 1 / activeEdgeCount; // Base weight for each edge
 
-    // Get shortest path using Dijkstra's
-    const distances = dijkstra(redPos);
-    const blueDistance = distances[`${bluePos.x},${bluePos.y}`];
-
-    // If no path exists, move randomly
-    if (blueDistance === Infinity) {
-        redPos = validMoves[Math.floor(Math.random() * validMoves.length)];
+    // Run Dijkstra's algorithm with weighted edges
+    const result = dijkstraWithWeights(redPos, bluePos, edgeWeight);
+    
+    if (!result || !result.nextMove) {
+        // If no path exists, move towards blue using Manhattan distance
+        const validMoves = getValidMoves(redPos);
+        if (validMoves.length === 0) return false;
+        
+        let bestMove = validMoves[0];
+        let bestDistance = getManhattanDistance(validMoves[0], bluePos);
+        
+        validMoves.forEach(move => {
+            const distance = getManhattanDistance(move, bluePos);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestMove = move;
+            }
+        });
+        
+        redPos = bestMove;
         return true;
     }
 
-    // Find the move that gets us closer to blue
-    let bestMove = validMoves[0];
-    let bestDistance = distances[`${validMoves[0].x},${validMoves[0].y}`];
-
-    validMoves.forEach(move => {
-        const moveDistance = distances[`${move.x},${move.y}`];
-        if (moveDistance < bestDistance) {
-            bestDistance = moveDistance;
-            bestMove = move;
-        }
-    });
-
-    redPos = bestMove;
+    redPos = result.nextMove;
     return true;
 }
-function dijkstra(start) {
-    const distances = {};
-    const visited = new Set();
 
-    // Initialize distances
+function dijkstraWithWeights(start, end, edgeWeight) {
+    const distances = {};
+    const previous = {};
+    const unvisited = new Set();
+    
+    // Initialize distances and unvisited set
     for (let x = 0; x < GRID_SIZE; x++) {
         for (let y = 0; y < GRID_SIZE; y++) {
-            distances[`${x},${y}`] = Infinity;
+            const key = `${x},${y}`;
+            distances[key] = Infinity;
+            unvisited.add(key);
         }
     }
+    
     distances[`${start.x},${start.y}`] = 0;
-
-    while (true) {
+    
+    while (unvisited.size > 0) {
         // Find unvisited node with smallest distance
-        let current = null;
+        let currentKey = null;
         let smallestDistance = Infinity;
-
-        for (let x = 0; x < GRID_SIZE; x++) {
-            for (let y = 0; y < GRID_SIZE; y++) {
-                const key = `${x},${y}`;
-                if (!visited.has(key) && distances[key] < smallestDistance) {
-                    smallestDistance = distances[key];
-                    current = {x, y};
-                }
+        
+        unvisited.forEach(key => {
+            if (distances[key] < smallestDistance) {
+                smallestDistance = distances[key];
+                currentKey = key;
             }
+        });
+        
+        if (!currentKey || smallestDistance === Infinity) break;
+        
+        // Convert key back to coordinates
+        const [x, y] = currentKey.split(',').map(Number);
+        const current = {x, y};
+        
+        // If we've reached the end, reconstruct the path
+        if (x === end.x && y === end.y) {
+            // Reconstruct path to find next move
+            let curr = currentKey;
+            let nextMove = null;
+            
+            while (previous[curr]) {
+                const [prevX, prevY] = previous[curr].split(',').map(Number);
+                if (prevX === start.x && prevY === start.y) {
+                    nextMove = {x, y};
+                }
+                curr = previous[curr];
+            }
+            
+            return {
+                distance: distances[currentKey],
+                nextMove: nextMove
+            };
         }
-
-        if (!current || smallestDistance === Infinity) break;
-
-        const currentKey = `${current.x},${current.y}`;
-        visited.add(currentKey);
-
-        // Update distances to neighbors
+        
+        unvisited.delete(currentKey);
+        
+        // Check all neighbors
         const neighbors = getValidMoves(current);
         neighbors.forEach(neighbor => {
             const neighborKey = `${neighbor.x},${neighbor.y}`;
-            if (visited.has(neighborKey)) return;
-
-            const distance = distances[currentKey] + 1;
+            if (!unvisited.has(neighborKey)) return;
+            
+            // Calculate new distance including edge weight
+            const distance = distances[currentKey] + edgeWeight;
+            
             if (distance < distances[neighborKey]) {
                 distances[neighborKey] = distance;
+                previous[neighborKey] = currentKey;
             }
         });
     }
+    
+    return null; // No path found
+}
 
-    return distances;
+function getManhattanDistance(pos1, pos2) {
+    return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
 }
 function isMobileDevice() {
     return (window.innerWidth <= 768) || ('ontouchstart' in window);
