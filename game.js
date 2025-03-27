@@ -253,273 +253,38 @@ function moveRedEvade() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
 
-    // Calculate pressure from blue point
-    const pressureMap = calculatePressureMap(bluePos);
-    
-    // Score moves based on inverse pressure and escape routes
-    const scoredMoves = validMoves.map(move => {
-        const key = `${move.x},${move.y}`;
-        const pressure = pressureMap[key].pressure;
-        const escapeRoutes = getValidMoves(move).length;
-        
-        // Calculate future mobility
-        let futureMobility = 0;
-        const futurePositions = getValidMoves(move);
-        futurePositions.forEach(pos => {
-            futureMobility += getValidMoves(pos).length;
-        });
+    const isAdjacentToBlue = Math.abs(bluePos.x - redPos.x) + Math.abs(bluePos.y - redPos.y) === 1;
 
-        return {
-            pos: move,
-            score: (1 - pressure) * // Lower pressure is better for evading
-                  (escapeRoutes / 4) * // More escape routes are better
-                  (1 + futureMobility / 8) // Better future mobility preferred
-        };
-    });
-
-    // Choose move with lowest pressure (furthest from blue)
-    scoredMoves.sort((a, b) => b.score - a.score);
-    
-    // Add randomization among top moves
-    const topMoves = scoredMoves.slice(0, Math.min(2, scoredMoves.length));
-    const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)];
-    
-    redPos = selectedMove.pos;
-    return true;
-}
-
-    function scoreMoveWithField(move) {
-        // Calculate how well this move aligns with the field direction
-        const moveVector = {
-            x: move.x - redPos.x,
-            y: move.y - redPos.y
-        };
-
-        // Dot product to see how well move aligns with field
-        const alignment = (moveVector.x * fieldVector.x + moveVector.y * fieldVector.y);
-        
-        // Calculate freedom score
-        const freedom = calculatePathFreedom(move);
-        
-        // Distance from blue
-        const distanceFromBlue = Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y);
-        
-        // Combine scores - heavily weight freedom when cornered
-        const isCorner = validMoves.length <= 2;
-        const freedomWeight = isCorner ? 2 : 1;
-        
-        return {
-            pos: move,
-            score: (alignment * 0.5) + (freedom * freedomWeight) + (distanceFromBlue * 0.7)
-        };
-    }
-
-    // Score all possible moves
-    const scoredMoves = validMoves.map(move => scoreMoveWithField(move));
-    
-    // Sort by score (higher is better)
-    scoredMoves.sort((a, b) => b.score - a.score);
-    
-    // Add some randomness among top moves to avoid predictability
-    const topMoves = scoredMoves.slice(0, Math.min(2, scoredMoves.length));
-    const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)];
-    
-    redPos = selectedMove.pos;
-    return true;
-}
-
-    function countActiveEdgesAround(pos) {
-        return getValidMoves(pos).length;
-    }
-
-    // Get all valid moves
-    const validMoves = getValidMoves(redPos);
-    if (validMoves.length === 0) return false;
-
-    // Calculate scores for each possible move
-    const scoredMoves = validMoves.map(move => {
-        const repulsionScore = calculateRepulsionScore(move);
-        
-        // Simulate edge removal impact
-        const futureMovesCount = getValidMoves(move).length;
-        
-        // Final move score combines multiple factors
-        return {
-            pos: move,
-            score: repulsionScore.score * (futureMovesCount / 4)
-        };
-    });
-
-    // Choose the move with the lowest repulsion score (best escape route)
-    scoredMoves.sort((a, b) => a.score - b.score);
-    
-    // Add some randomness to avoid predictable patterns
-    const topMoves = scoredMoves.slice(0, Math.min(3, scoredMoves.length));
-    const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)];
-    
-    redPos = selectedMove.pos;
-    return true;
-}
-function calculatePressureMap(source) {
-    const pressureMap = {};
-    const unvisited = new Set();
-    
-    // Initialize pressure map
-    for (let x = 0; x < GRID_SIZE; x++) {
-        for (let y = 0; y < GRID_SIZE; y++) {
-            const key = `${x},${y}`;
-            pressureMap[key] = {
-                pressure: 0,
-                flowDirection: null
-            };
-            unvisited.add(key);
+    if (isAdjacentToBlue) {
+        const escapeMoves = validMoves.filter(move => 
+            Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y) > 1
+        );
+        if (escapeMoves.length > 0) {
+            redPos = escapeMoves[Math.floor(Math.random() * escapeMoves.length)];
+            return true;
         }
     }
 
-    // Set source pressure
-    pressureMap[`${source.x},${source.y}`].pressure = 1;
+    // Score moves based on distance from blue
+    const scoredMoves = validMoves.map(move => ({
+        move,
+        score: Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y)
+    }));
 
-    while (unvisited.size > 0) {
-        let currentKey = null;
-        let maxPressure = -Infinity;
-
-        unvisited.forEach(key => {
-            if (pressureMap[key].pressure > maxPressure) {
-                maxPressure = pressureMap[key].pressure;
-                currentKey = key;
-            }
-        });
-
-        if (!currentKey || maxPressure === 0) break;
-
-        const [x, y] = currentKey.split(',').map(Number);
-        const current = {x, y};
-        unvisited.delete(currentKey);
-
-        const neighbors = getValidMoves(current);
-        const pressureDrop = 1 / (neighbors.length + 1);
-
-        neighbors.forEach(neighbor => {
-            const neighborKey = `${neighbor.x},${neighbor.y}`;
-            if (!unvisited.has(neighborKey)) return;
-
-            const newPressure = maxPressure - pressureDrop;
-            if (newPressure > pressureMap[neighborKey].pressure) {
-                pressureMap[neighborKey].pressure = newPressure;
-            }
-        });
-    }
-
-    return pressureMap;
+    scoredMoves.sort((a, b) => b.score - a.score);
+    redPos = scoredMoves[0].move;
+    return true;
 }
+
 function moveRedAttack() {
-    const validMoves = getValidMoves(redPos);
-    if (validMoves.length === 0) return false;
-
-    // Calculate pressure from blue point (source)
-    const pressureMap = calculatePressureMap(bluePos);
+    const path = findShortestPath(redPos, bluePos);
+    if (!path || path.length < 2) return false;
     
-    // Score moves based on pressure and path availability
-    const scoredMoves = validMoves.map(move => {
-        const key = `${move.x},${move.y}`;
-        const pressure = pressureMap[key].pressure;
-        const connectivity = getValidMoves(move).length;
-        
-        return {
-            pos: move,
-            score: pressure * (1 + (connectivity / 4)) // Higher pressure is better for attacking
-        };
-    });
-
-    // Choose move with highest pressure (closest to blue)
-    scoredMoves.sort((a, b) => b.score - a.score);
-    
-    // Add slight randomization among top moves
-    const topMoves = scoredMoves.slice(0, Math.min(2, scoredMoves.length));
-    const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)];
-    
-    redPos = selectedMove.pos;
+    // Move one step along the shortest path
+    redPos = path[1];
     return true;
 }
 
-function dijkstraWithWeights(start, end, edgeWeight) {
-    const distances = {};
-    const previous = {};
-    const unvisited = new Set();
-    
-    // Initialize distances and unvisited set
-    for (let x = 0; x < GRID_SIZE; x++) {
-        for (let y = 0; y < GRID_SIZE; y++) {
-            const key = `${x},${y}`;
-            distances[key] = Infinity;
-            unvisited.add(key);
-        }
-    }
-    
-    distances[`${start.x},${start.y}`] = 0;
-    
-    while (unvisited.size > 0) {
-        // Find unvisited node with smallest distance
-        let currentKey = null;
-        let smallestDistance = Infinity;
-        
-        unvisited.forEach(key => {
-            if (distances[key] < smallestDistance) {
-                smallestDistance = distances[key];
-                currentKey = key;
-            }
-        });
-        
-        if (!currentKey || smallestDistance === Infinity) break;
-        
-        // Convert key back to coordinates
-        const [x, y] = currentKey.split(',').map(Number);
-        const current = {x, y};
-        
-        // If we've reached the end, reconstruct the path
-        if (x === end.x && y === end.y) {
-            // Reconstruct path to find next move
-            let curr = currentKey;
-            let nextMove = null;
-            
-            while (previous[curr]) {
-                const [prevX, prevY] = previous[curr].split(',').map(Number);
-                if (prevX === start.x && prevY === start.y) {
-                    nextMove = {x, y};
-                }
-                curr = previous[curr];
-            }
-            
-            return {
-                distance: distances[currentKey],
-                nextMove: nextMove
-            };
-        }
-        
-        unvisited.delete(currentKey);
-        
-        // Check all neighbors
-        const neighbors = getValidMoves(current);
-        neighbors.forEach(neighbor => {
-            const neighborKey = `${neighbor.x},${neighbor.y}`;
-            if (!unvisited.has(neighborKey)) return;
-            
-            // Calculate new distance including edge weight
-            const distance = distances[currentKey] + edgeWeight;
-            
-            if (distance < distances[neighborKey]) {
-                distances[neighborKey] = distance;
-                previous[neighborKey] = currentKey;
-            }
-        });
-    }
-    
-    return null; // No path found
-}
-
-function getManhattanDistance(pos1, pos2) {
-    return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
-}
 function isMobileDevice() {
     return (window.innerWidth <= 768) || ('ontouchstart' in window);
 } 
