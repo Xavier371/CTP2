@@ -253,36 +253,70 @@ function moveRedEvade() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
 
-    const isAdjacentToBlue = Math.abs(bluePos.x - redPos.x) + Math.abs(bluePos.y - redPos.y) === 1;
+    // Score each possible move
+    const scoredMoves = validMoves.map(move => {
+        let score = 0;
+        
+        // Base distance score
+        score += getDistance(move, bluePos) * 2;
+        
+        // Connectivity score (number of escape routes)
+        const futureRoutes = getValidMoves(move).length;
+        score += futureRoutes * 3;
+        
+        // Edge proximity bonus
+        if (move.x === 0 || move.x === GRID_SIZE-1) score += 2;
+        if (move.y === 0 || move.y === GRID_SIZE-1) score += 2;
+        
+        // Penalty for moves that could lead to being trapped
+        const criticalEdges = countCriticalEdges(move);
+        score -= criticalEdges * 2;
 
-    if (isAdjacentToBlue) {
-        const escapeMoves = validMoves.filter(move => 
-            Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y) > 1
-        );
-        if (escapeMoves.length > 0) {
-            redPos = escapeMoves[Math.floor(Math.random() * escapeMoves.length)];
-            return true;
-        }
-    }
+        return { move, score };
+    });
 
-    // Score moves based on distance from blue
-    const scoredMoves = validMoves.map(move => ({
-        move,
-        score: Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y)
-    }));
-
+    // Choose the move with highest score
     scoredMoves.sort((a, b) => b.score - a.score);
     redPos = scoredMoves[0].move;
     return true;
 }
 
 function moveRedAttack() {
-    const path = findShortestPath(redPos, bluePos);
-    if (!path || path.length < 2) return false;
-    
-    // Move one step along the shortest path
-    redPos = path[1];
+    const validMoves = getValidMoves(redPos);
+    if (validMoves.length === 0) return false;
+
+    // Score each possible move
+    const scoredMoves = validMoves.map(move => {
+        let score = 0;
+        
+        // Base distance score (closer is better)
+        score += (GRID_SIZE * 2 - getDistance(move, bluePos)) * 2;
+        
+        // Calculate blue's escape routes from this position
+        const blueRoutes = getValidMoves(bluePos).length;
+        score += (8 - blueRoutes) * 2; // Prefer positions that limit blue's options
+        
+        // Bonus for controlling central positions
+        const centerDistance = Math.abs(move.x - GRID_SIZE/2) + Math.abs(move.y - GRID_SIZE/2);
+        score += (GRID_SIZE - centerDistance);
+        
+        // Bonus for creating "pincer" movements
+        if (canCreatePincer(move, bluePos)) score += 5;
+
+        return { move, score };
+    });
+
+    // Choose the move with highest score
+    scoredMoves.sort((a, b) => b.score - a.score);
+    redPos = scoredMoves[0].move;
     return true;
+}
+
+function canCreatePincer(move, targetPos) {
+    // Check if this move helps create a trapping position
+    const dx = Math.abs(move.x - targetPos.x);
+    const dy = Math.abs(move.y - targetPos.y);
+    return (dx === 1 && dy === 1) || (dx === 2 && dy === 0) || (dx === 0 && dy === 2);
 }
 
 function isMobileDevice() {
