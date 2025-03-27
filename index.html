@@ -7,32 +7,22 @@
 </head>
 <body>
     <div class="container">
-        <div class="left-section">
-            <h1>Catch the Point</h1>
-            <div id="gameTitle" class="game-title"></div>
-            <div id="message"></div>
+        <h1>Catch the Point</h1>
+        <div id="gameTitle" class="game-title"></div>
+        <div id="message"></div>
+        <canvas id="gameCanvas"></canvas>
+        <div class="controls">
+            <button onclick="resetGame()" class="game-button">Reset</button>
+            <button onclick="toggleMode()" id="modeBtn" class="game-button">Offense</button>
+            <button onclick="showInstructions()" class="game-button">Help</button>
         </div>
-        
-        <div class="center-section">
-            <canvas id="gameCanvas"></canvas>
-        </div>
-
-        <div class="right-section">
-            <div class="control-wrapper">
-                <div class="top-controls">
-                    <button onclick="resetGame()" class="game-button">Reset</button>
-                    <button onclick="toggleMode()" id="modeBtn" class="game-button">Offense</button>
-                    <button onclick="showInstructions()" class="game-button">Help</button>
-                </div>
-                <div id="mobileControls" class="mobile-controls">
-                    <button class="mobile-btn up-btn"><span>↑</span></button>
-                    <div class="middle-row">
-                        <button class="mobile-btn left-btn"><span>←</span></button>
-                        <button class="mobile-btn right-btn"><span>→</span></button>
-                    </div>
-                    <button class="mobile-btn down-btn"><span>↓</span></button>
-                </div>
+        <div id="mobileControls" class="mobile-controls">
+            <button class="mobile-btn up-btn"><span>↑</span></button>
+            <div class="middle-row">
+                <button class="mobile-btn left-btn"><span>←</span></button>
+                <button class="mobile-btn right-btn"><span>→</span></button>
             </div>
+            <button class="mobile-btn down-btn"><span>↓</span></button>
         </div>
     </div>
 
