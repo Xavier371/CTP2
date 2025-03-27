@@ -415,7 +415,14 @@ function updateMobileButtonColors() {
         });
     }
 }
-
+document.addEventListener('DOMContentLoaded', function() {
+    // Move your initialization code here
+    resetGame();
+    if (isMobileDevice()) {
+        initializeMobileControls();
+        updateMobileButtonColors();
+    }
+});
 // Add this to prevent any touch zooming
 document.addEventListener('touchmove', function(e) {
     if (e.touches.length > 1) {
