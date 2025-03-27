@@ -145,10 +145,11 @@ canvas {
     canvas {
         max-width: 95vw;
         height: auto;
+        margin: 10px 0;
     }
 
     .controls {
-        margin: 10px 0;
+        margin: 8px 0 15px 0;
     }
 
     .game-button {
@@ -158,7 +159,7 @@ canvas {
 
     .mobile-controls {
         display: flex;
-        margin: 10px 0;
+        margin-top: 5px;
     }
 
     .mobile-btn {
@@ -185,11 +186,20 @@ canvas {
 
     .left-section {
         width: 25%;
-        text-align: left;
+        text-align: center;
         display: flex;
         flex-direction: column;
         justify-content: center;
-        gap: 10px;
+        gap: 20px;
+        padding: 0 10px;
+    }
+
+    .left-section h1 {
+        margin-top: -20px;
+    }
+
+    .left-section #message {
+        margin-top: 10px;
     }
 
     .center-section {
@@ -204,24 +214,26 @@ canvas {
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        height: 100%;
-        padding: 20px 10px;
+        height: 90%;
+        padding: 0 10px;
     }
 
     .controls {
-        flex-direction: row;
-        justify-content: center;
-        gap: 5px;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        margin-top: 25%;
     }
 
     .game-button {
-        padding: 6px 12px;
+        padding: 8px 16px;
         font-size: 12px;
+        width: 80px;
     }
 
     .mobile-controls {
         display: flex;
-        margin-top: auto;
+        margin-bottom: 15%;
     }
 
     .mobile-btn {
