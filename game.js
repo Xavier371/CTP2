@@ -6,15 +6,24 @@ const POINT_RADIUS = 8;
 let canvas = document.getElementById('gameCanvas');
 let ctx = canvas.getContext('2d');
 
-canvas.width = CELL_SIZE * GRID_SIZE;
-canvas.height = CELL_SIZE * GRID_SIZE;
+// Initialize canvas size
+resizeCanvas();
 
 let bluePos = { x: 0, y: GRID_SIZE - 1 };
 let redPos = { x: GRID_SIZE - 1, y: 0 };
 let edges = [];
 let gameOver = false;
-let gameMode = 'offense'; // 'offense', 'defense', or 'twoPlayer'
-let redTurn = true; // Red always moves first
+let gameMode = 'offense';
+let redTurn = true;
+
+document.addEventListener('DOMContentLoaded', function() {
+    resizeCanvas();
+    resetGame();
+    if (isMobileDevice()) {
+        initializeMobileControls();
+        updateMobileButtonColors();
+    }
+});
 
 function resizeCanvas() {
     const container = document.querySelector('.center-section');
