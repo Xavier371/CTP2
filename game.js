@@ -180,8 +180,6 @@ function isEdgeBetweenPoints(edge, pos1, pos2) {
         (edge.x2 === pos1.x && edge.y2 === pos1.y && edge.x1 === pos2.x && edge.y1 === pos2.y)
     );
 }
-;
-}
 
 function removeRandomEdge() {
     const activeEdges = edges.filter(edge => {
@@ -255,210 +253,105 @@ function moveRedEvade() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
 
-    // Score each possible move
-    const scoredMoves = validMoves.map(move => {
-        let score = 0;
-        
-        // Base distance score
-        score += getDistance(move, bluePos) * 2;
-        
-        // Connectivity score (number of escape routes)
-        const futureRoutes = getValidMoves(move).length;
-        score += futureRoutes * 3;
-        
-        // Edge proximity bonus
-        if (move.x === 0 || move.x === GRID_SIZE-1) score += 2;
-        if (move.y === 0 || move.y === GRID_SIZE-1) score += 2;
-        
-        // Penalty for moves that could lead to being trapped
-        const criticalEdges = countCriticalEdges(move);
-        score -= criticalEdges * 2;
+    const isAdjacentToBlue = Math.abs(bluePos.x - redPos.x) + Math.abs(bluePos.y - redPos.y) === 1;
 
-        return { move, score };
-    });
+    if (isAdjacentToBlue) {
+        const escapeMoves = validMoves.filter(move => 
+            Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y) > 1
+        );
+        if (escapeMoves.length > 0) {
+            redPos = escapeMoves[Math.floor(Math.random() * escapeMoves.length)];
+            return true;
+        }
+    }
 
-    // Choose the move with highest score
+    // Score moves based on distance from blue
+    const scoredMoves = validMoves.map(move => ({
+        move,
+        score: Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y)
+    }));
+
     scoredMoves.sort((a, b) => b.score - a.score);
     redPos = scoredMoves[0].move;
     return true;
 }
 
 function moveRedAttack() {
-    // Get shortest path using Dijkstra's
-    const { path, distances } = dijkstra(redPos, bluePos);
-    
-    if (path && path.length > 1) {
-        // Move to the next position in the shortest path
-        redPos = path[1];
-        return true;
-    }
-    
-    // If no path exists, try to move closer using Manhattan distance
     const validMoves = getValidMoves(redPos);
-    if (validMoves.length > 0) {
-        const bestMove = validMoves.reduce((best, move) => {
-            const currentDist = getManhattanDistance(move, bluePos);
-            const bestDist = getManhattanDistance(best, bluePos);
-            return currentDist < bestDist ? move : best;
-        }, validMoves[0]);
-        
-        redPos = bestMove;
+    if (validMoves.length === 0) return false;
+
+    // Get shortest path using Dijkstra's
+    const distances = dijkstra(redPos);
+    const blueDistance = distances[`${bluePos.x},${bluePos.y}`];
+
+    // If no path exists, move randomly
+    if (blueDistance === Infinity) {
+        redPos = validMoves[Math.floor(Math.random() * validMoves.length)];
         return true;
     }
-    
-    return false;
+
+    // Find the move that gets us closer to blue
+    let bestMove = validMoves[0];
+    let bestDistance = distances[`${validMoves[0].x},${validMoves[0].y}`];
+
+    validMoves.forEach(move => {
+        const moveDistance = distances[`${move.x},${move.y}`];
+        if (moveDistance < bestDistance) {
+            bestDistance = moveDistance;
+            bestMove = move;
+        }
+    });
+
+    redPos = bestMove;
+    return true;
 }
-function dijkstra(start, end) {
+function dijkstra(start) {
     const distances = {};
-    const previous = {};
-    const unvisited = new Set();
-    
+    const visited = new Set();
+
     // Initialize distances
     for (let x = 0; x < GRID_SIZE; x++) {
         for (let y = 0; y < GRID_SIZE; y++) {
-            const key = `${x},${y}`;
-            distances[key] = Infinity;
-            unvisited.add(key);
+            distances[`${x},${y}`] = Infinity;
         }
     }
-    
-    // Set start distance to 0
     distances[`${start.x},${start.y}`] = 0;
-    
-    while (unvisited.size > 0) {
+
+    while (true) {
         // Find unvisited node with smallest distance
         let current = null;
         let smallestDistance = Infinity;
-        
-        for (const key of unvisited) {
-            if (distances[key] < smallestDistance) {
-                smallestDistance = distances[key];
-                current = key;
-            }
-        }
-        
-        if (current === null || distances[current] === Infinity) break;
-        
-        // Remove current from unvisited
-        unvisited.delete(current);
-        
-        // If we reached the end, break
-        if (current === `${end.x},${end.y}`) break;
-        
-        // Get current coordinates
-        const [x, y] = current.split(',').map(Number);
-        const currentPos = { x, y };
-        
-        // Check neighbors
-        const neighbors = getValidMoves(currentPos);
-        
-        for (const neighbor of neighbors) {
-            const neighborKey = `${neighbor.x},${neighbor.y}`;
-            if (!unvisited.has(neighborKey)) continue;
-            
-            const distance = distances[current] + 1; // Edge weight is 1
-            
-            if (distance < distances[neighborKey]) {
-                distances[neighborKey] = distance;
-                previous[neighborKey] = current;
-            }
-        }
-    }
-    
-    // Reconstruct path
-    const path = [];
-    let current = `${end.x},${end.y}`;
-    
-    while (current) {
-        const [x, y] = current.split(',').map(Number);
-        path.unshift({ x, y });
-        current = previous[current];
-    }
-    
-    return {
-        path: path.length > 1 ? path : null,
-        distances
-    };
-}
 
-function findPointsTwoMovesAway(startPos) {
-    const points = new Set();
-    const visited = new Set();
-    
-    // Get first move positions
-    const firstMoves = getValidMoves(startPos);
-    
-    // For each first move, get second moves
-    firstMoves.forEach(firstMove => {
-        const secondMoves = getValidMoves(firstMove);
-        secondMoves.forEach(secondMove => {
-            // Only include points exactly 2 moves away
-            if (!isAdjacent(startPos, secondMove) && 
-                !isSamePosition(startPos, secondMove)) {
-                const key = `${secondMove.x},${secondMove.y}`;
-                if (!visited.has(key)) {
-                    points.add(secondMove);
-                    visited.add(key);
+        for (let x = 0; x < GRID_SIZE; x++) {
+            for (let y = 0; y < GRID_SIZE; y++) {
+                const key = `${x},${y}`;
+                if (!visited.has(key) && distances[key] < smallestDistance) {
+                    smallestDistance = distances[key];
+                    current = {x, y};
                 }
             }
-        });
-    });
-    
-    return Array.from(points);
-}
-
-function findClosestPoint(fromPos, points) {
-    let closestPoint = null;
-    let minDistance = Infinity;
-    
-    points.forEach(point => {
-        const distance = getManhattanDistance(fromPos, point);
-        if (distance < minDistance) {
-            minDistance = distance;
-            closestPoint = point;
         }
-    });
-    
-    return closestPoint;
-}
 
-function getBestMoveTowards(fromPos, targetPos) {
-    const validMoves = getValidMoves(fromPos);
-    if (validMoves.length === 0) return null;
-    
-    // Score each move based on how close it gets to the target
-    const scoredMoves = validMoves.map(move => ({
-        move,
-        score: -getManhattanDistance(move, targetPos) // Negative because we want to minimize distance
-    }));
-    
-    // Sort by score (highest first)
-    scoredMoves.sort((a, b) => b.score - a.score);
-    
-    return scoredMoves[0].move;
-}
+        if (!current || smallestDistance === Infinity) break;
 
-function getManhattanDistance(pos1, pos2) {
-    return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
-}
+        const currentKey = `${current.x},${current.y}`;
+        visited.add(currentKey);
 
-function isAdjacent(pos1, pos2) {
-    const dx = Math.abs(pos1.x - pos2.x);
-    const dy = Math.abs(pos1.y - pos2.y);
-    return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
-}
+        // Update distances to neighbors
+        const neighbors = getValidMoves(current);
+        neighbors.forEach(neighbor => {
+            const neighborKey = `${neighbor.x},${neighbor.y}`;
+            if (visited.has(neighborKey)) return;
 
-function isSamePosition(pos1, pos2) {
-    return pos1.x === pos2.x && pos1.y === pos2.y;
-}
+            const distance = distances[currentKey] + 1;
+            if (distance < distances[neighborKey]) {
+                distances[neighborKey] = distance;
+            }
+        });
+    }
 
-function canCreatePincer(move, targetPos) {
-    // Check if this move helps create a trapping position
-    const dx = Math.abs(move.x - targetPos.x);
-    const dy = Math.abs(move.y - targetPos.y);
-    return (dx === 1 && dy === 1) || (dx === 2 && dy === 0) || (dx === 0 && dy === 2);
+    return distances;
 }
-
 function isMobileDevice() {
     return (window.innerWidth <= 768) || ('ontouchstart' in window);
 } 
