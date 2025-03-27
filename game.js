@@ -332,10 +332,46 @@ function moveRedEvade() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
 
-    // Calculate pressure from blue point
+    // Check if blue is adjacent and could force a crossing
+    const isAdjacentToBlue = Math.abs(bluePos.x - redPos.x) + Math.abs(bluePos.y - redPos.y) === 1;
+    
+    if (isAdjacentToBlue) {
+        // Get blue's possible next moves
+        const blueMoves = getValidMoves(bluePos);
+        
+        // Find moves that avoid crossing paths with blue's potential moves
+        const safeMoves = validMoves.filter(move => {
+            // Check if this move would allow blue to force a crossing
+            const wouldCross = blueMoves.some(blueMove => {
+                // If blue and red would end up switching positions, it's a crossing
+                return blueMove.x === redPos.x && blueMove.y === redPos.y &&
+                       move.x === bluePos.x && move.y === bluePos.y;
+            });
+            return !wouldCross;
+        });
+
+        // If there are safe moves, use only those
+        if (safeMoves.length > 0) {
+            // Score safe moves based on escape potential
+            const scoredMoves = safeMoves.map(move => {
+                const escapeRoutes = getValidMoves(move).length;
+                const distanceFromBlue = Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y);
+                return {
+                    pos: move,
+                    score: escapeRoutes + distanceFromBlue
+                };
+            });
+            
+            // Choose the best safe move
+            scoredMoves.sort((a, b) => b.score - a.score);
+            redPos = scoredMoves[0].pos;
+            return true;
+        }
+    }
+
+    // If not adjacent or no safe moves, use regular evade logic
     const pressureMap = calculatePressureMap(bluePos);
     
-    // Score moves based on inverse pressure and escape routes
     const scoredMoves = validMoves.map(move => {
         const key = `${move.x},${move.y}`;
         const pressure = pressureMap[key].pressure;
@@ -348,25 +384,29 @@ function moveRedEvade() {
             futureMobility += getValidMoves(pos).length;
         });
 
+        // Heavily penalize moves that could lead to crossing paths
+        const couldLeadToCrossing = Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y) === 1;
+        const crossingPenalty = couldLeadToCrossing ? 0.5 : 1;
+
         return {
             pos: move,
-            score: (1 - pressure) * // Lower pressure is better for evading
-                  (escapeRoutes / 4) * // More escape routes are better
-                  (1 + futureMobility / 8) // Better future mobility preferred
+            score: ((1 - pressure) * // Lower pressure is better for evading
+                   (escapeRoutes / 4) * // More escape routes are better
+                   (1 + futureMobility / 8) * // Better future mobility preferred
+                   crossingPenalty) // Penalize moves that could lead to crossing
         };
     });
 
-    // Choose move with lowest pressure (furthest from blue)
+    // Choose move with highest score
     scoredMoves.sort((a, b) => b.score - a.score);
     
-    // Add randomization among top moves
+    // Add some randomization among top moves to avoid predictability
     const topMoves = scoredMoves.slice(0, Math.min(2, scoredMoves.length));
     const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)];
     
     redPos = selectedMove.pos;
     return true;
 }
-
 function moveRedAttack() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
