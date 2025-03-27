@@ -250,27 +250,78 @@ function findShortestPath(start, end) {
     return null;
 }
 function moveRedEvade() {
-    // Calculate repulsion costs and potential moves
-    function calculateRepulsionScore(pos) {
-        // Distance from blue point (Manhattan distance for grid-based movement)
-        const dx = pos.x - bluePos.x;
-        const dy = pos.y - bluePos.y;
-        const distance = Math.abs(dx) + Math.abs(dy);
+    const validMoves = getValidMoves(redPos);
+    if (validMoves.length === 0) return false;
+
+    // Calculate "electric field" direction from blue (battery) to red (electron)
+    const fieldVector = {
+        x: redPos.x - bluePos.x,
+        y: redPos.y - bluePos.y
+    };
+
+    function calculatePathFreedom(pos) {
+        // Count number of available moves in each direction up to 3 steps away
+        let freedom = 0;
+        let visited = new Set();
+        let queue = [{pos: pos, depth: 0}];
         
-        // Base repulsion score (inverse square law inspired)
-        const baseScore = distance === 0 ? Infinity : 1 / (distance * distance);
+        while (queue.length > 0) {
+            const current = queue.shift();
+            const key = `${current.pos.x},${current.pos.y}`;
+            
+            if (visited.has(key)) continue;
+            visited.add(key);
+            
+            if (current.depth < 3) {
+                const nextMoves = getValidMoves(current.pos);
+                freedom += nextMoves.length;
+                nextMoves.forEach(move => {
+                    queue.push({pos: move, depth: current.depth + 1});
+                });
+            }
+        }
+        return freedom;
+    }
+
+    function scoreMoveWithField(move) {
+        // Calculate how well this move aligns with the field direction
+        const moveVector = {
+            x: move.x - redPos.x,
+            y: move.y - redPos.y
+        };
+
+        // Dot product to see how well move aligns with field
+        const alignment = (moveVector.x * fieldVector.x + moveVector.y * fieldVector.y);
         
-        // Additional factors
-        const edgeProximity = countActiveEdgesAround(pos);
-        const isCorner = (pos.x === 0 || pos.x === GRID_SIZE - 1) && 
-                        (pos.y === 0 || pos.y === GRID_SIZE - 1);
+        // Calculate freedom score
+        const freedom = calculatePathFreedom(move);
         
-        // Combine factors into final score
+        // Distance from blue
+        const distanceFromBlue = Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y);
+        
+        // Combine scores - heavily weight freedom when cornered
+        const isCorner = validMoves.length <= 2;
+        const freedomWeight = isCorner ? 2 : 1;
+        
         return {
-            pos: pos,
-            score: baseScore * (1 + edgeProximity/4) * (isCorner ? 0.5 : 1)
+            pos: move,
+            score: (alignment * 0.5) + (freedom * freedomWeight) + (distanceFromBlue * 0.7)
         };
     }
+
+    // Score all possible moves
+    const scoredMoves = validMoves.map(move => scoreMoveWithField(move));
+    
+    // Sort by score (higher is better)
+    scoredMoves.sort((a, b) => b.score - a.score);
+    
+    // Add some randomness among top moves to avoid predictability
+    const topMoves = scoredMoves.slice(0, Math.min(2, scoredMoves.length));
+    const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)];
+    
+    redPos = selectedMove.pos;
+    return true;
+}
 
     function countActiveEdgesAround(pos) {
         return getValidMoves(pos).length;
