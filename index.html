@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Catch the Point</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="styles.css">
 </head>
 <body>
@@ -9,11 +10,19 @@
         <h1>Catch the Point</h1>
         <div id="gameTitle" class="game-title"></div>
         <div id="message"></div>
-        <canvas id="gameCanvas"></canvas>
         <div class="controls">
             <button onclick="resetGame()" class="game-button">Reset Game</button>
             <button onclick="toggleMode()" id="modeBtn" class="game-button">Offense</button>
             <button onclick="showInstructions()" class="game-button">How to Play</button>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+        <div id="mobileControls" class="mobile-controls">
+            <button class="mobile-btn up-btn">↑</button>
+            <div class="middle-row">
+                <button class="mobile-btn left-btn">←</button>
+                <button class="mobile-btn right-btn">→</button>
+            </div>
+            <button class="mobile-btn down-btn">↓</button>
         </div>
     </div>
 
@@ -35,7 +44,7 @@
 
             <h3>Two Player Mode</h3>
             <ul>
-                <li>Red uses WASD, Blue uses arrow keys, Blue is chasing red</li>
+                <li>Red uses WASD (or red buttons on mobile), Blue uses arrow keys (or blue buttons on mobile)</li>
                 <li>Take turns trying to catch or escape each other</li>
             </ul>
 
