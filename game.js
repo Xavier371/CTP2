@@ -249,90 +249,94 @@ function findShortestPath(start, end) {
     
     return null;
 }
-
-
-// Add these constants at the top with your other constants
-const ATTACK_FORCE = 1.5;
-const EVADE_FORCE = 1.2;
-
-function moveRedAttack() {
-    const validMoves = getValidMoves(redPos);
-    if (validMoves.length === 0) return false;
-
-    // Calculate shortest path to blue
-    const pathToBlue = findShortestPath(redPos, bluePos);
-    
-    // Score each possible move
-    const scoredMoves = validMoves.map(move => {
-        // Base attraction force (like electromagnetic attraction)
-        const dx = bluePos.x - move.x;
-        const dy = bluePos.y - move.y;
-        const distance = Math.abs(dx) + Math.abs(dy);
-        const attractionForce = ATTACK_FORCE / (distance || 0.1);
-        
-        // Path analysis
-        const pathFromMove = findShortestPath(move, bluePos);
-        const pathScore = pathFromMove ? 1 / pathFromMove.length : 0;
-        
-        // Connectivity score (prefer positions with more options)
-        const connectivity = getValidMoves(move).length / 4;
-        
-        // If this move is along the shortest path to blue, give it a bonus
-        const isOnShortestPath = pathToBlue && pathToBlue.length > 1 && 
-            pathToBlue[1].x === move.x && pathToBlue[1].y === move.y;
-        const pathBonus = isOnShortestPath ? 2 : 0;
-
-        return {
-            move,
-            score: attractionForce + pathScore + connectivity + pathBonus
-        };
-    });
-
-    // Choose the move with the highest score
-    scoredMoves.sort((a, b) => b.score - a.score);
-    redPos = scoredMoves[0].move;
-    return true;
-}
-
 function moveRedEvade() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
 
-    // Score each possible move
-    const scoredMoves = validMoves.map(move => {
-        // Base repulsion force (like electromagnetic repulsion)
-        const dx = bluePos.x - move.x;
-        const dy = bluePos.y - move.y;
-        const distance = Math.abs(dx) + Math.abs(dy);
-        const repulsionForce = EVADE_FORCE * distance;
-        
-        // Connectivity analysis (prefer positions with more escape routes)
-        const escapeRoutes = getValidMoves(move).length;
-        const connectivityScore = escapeRoutes * 0.8;
-        
-        // Edge proximity bonus (being near edges provides more escape options)
-        const edgeProximity = (move.x === 0 || move.x === GRID_SIZE - 1 || 
-                              move.y === 0 || move.y === GRID_SIZE - 1) ? 1.5 : 0;
-        
-        // Penalty for moves that could lead to being trapped
-        const pathsFromMove = findShortestPath(move, bluePos);
-        const trapPenalty = pathsFromMove ? 0 : -5;
-        
-        // Emergency escape bonus if blue is adjacent
-        const isAdjacentToBlue = Math.abs(bluePos.x - move.x) + Math.abs(bluePos.y - move.y) === 1;
-        const emergencyBonus = isAdjacentToBlue ? -3 : 0;
+    const isAdjacentToBlue = Math.abs(bluePos.x - redPos.x) + Math.abs(bluePos.y - redPos.y) === 1;
 
-        return {
-            move,
-            score: repulsionForce + connectivityScore + edgeProximity + trapPenalty + emergencyBonus
-        };
-    });
+    if (isAdjacentToBlue) {
+        const escapeMoves = validMoves.filter(move => 
+            Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y) > 1
+        );
+        if (escapeMoves.length > 0) {
+            redPos = escapeMoves[Math.floor(Math.random() * escapeMoves.length)];
+            return true;
+        }
+    }
 
-    // Choose the move with the highest score
+    // Score moves based on distance from blue
+    const scoredMoves = validMoves.map(move => ({
+        move,
+        score: Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y)
+    }));
+
     scoredMoves.sort((a, b) => b.score - a.score);
     redPos = scoredMoves[0].move;
     return true;
 }
+
+function moveRedAttack() {
+    const path = findShortestPath(redPos, bluePos);
+    if (!path || path.length < 2) return false;
+    
+    // Move one step along the shortest path
+    redPos = path[1];
+    return true;
+}
+
+function isMobileDevice() {
+    return (window.innerWidth <= 768) || ('ontouchstart' in window);
+} 
+
+function initializeMobileControls() {
+    const redControls = {
+        'up-btn': 'w',
+        'down-btn': 's',
+        'left-btn': 'a',
+        'right-btn': 'd'
+    };
+
+    const blueControls = {
+        'up-btn': 'ArrowUp',
+        'down-btn': 'ArrowDown',
+        'left-btn': 'ArrowLeft',
+        'right-btn': 'ArrowRight'
+    };
+
+    for (const [className, _] of Object.entries(redControls)) {
+        document.querySelector(`.${className}`).addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent zoom
+            const key = gameMode === 'twoPlayer' && redTurn ? 
+                redControls[className] : blueControls[className];
+            handleMove(key);
+            updateMobileButtonColors();
+        });
+    }
+}
+
+function updateMobileButtonColors() {
+    if (!isMobileDevice()) return;
+    
+    const buttons = document.querySelectorAll('.mobile-btn');
+    if (gameMode === 'twoPlayer') {
+        const color = redTurn ? '#FF4444' : '#4169E1';
+        buttons.forEach(btn => {
+            btn.style.backgroundColor = color;
+        });
+    } else {
+        buttons.forEach(btn => {
+            btn.style.backgroundColor = '#4169E1';
+        });
+    }
+}
+
+// Add this to prevent any touch zooming
+document.addEventListener('touchmove', function(e) {
+    if (e.touches.length > 1) {
+        e.preventDefault();
+    }
+}, { passive: false });
 
 
 function checkGameOver() {
@@ -508,7 +512,15 @@ function resetGame() {
     
     updateGameTitle();
     drawGame();
+    updateMobileButtonColors();
+
 }
 
 // Initialize game
 resetGame();
+
+// Initialize mobile controls if needed
+if (isMobileDevice()) {
+    initializeMobileControls();
+    updateMobileButtonColors();
+}
