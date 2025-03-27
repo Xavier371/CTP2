@@ -249,39 +249,124 @@ function findShortestPath(start, end) {
     
     return null;
 }
+function calculatePressureMap(source) {
+    const pressureMap = {};
+    const unvisited = new Set();
+    
+    // Initialize pressure map
+    for (let x = 0; x < GRID_SIZE; x++) {
+        for (let y = 0; y < GRID_SIZE; y++) {
+            const key = `${x},${y}`;
+            pressureMap[key] = {
+                pressure: 0,
+                flowDirection: null
+            };
+            unvisited.add(key);
+        }
+    }
+
+    // Set source pressure
+    pressureMap[`${source.x},${source.y}`].pressure = 1;
+
+    while (unvisited.size > 0) {
+        let currentKey = null;
+        let maxPressure = -Infinity;
+
+        unvisited.forEach(key => {
+            if (pressureMap[key].pressure > maxPressure) {
+                maxPressure = pressureMap[key].pressure;
+                currentKey = key;
+            }
+        });
+
+        if (!currentKey || maxPressure === 0) break;
+
+        const [x, y] = currentKey.split(',').map(Number);
+        const current = {x, y};
+        unvisited.delete(currentKey);
+
+        const neighbors = getValidMoves(current);
+        const pressureDrop = 1 / (neighbors.length + 1);
+
+        neighbors.forEach(neighbor => {
+            const neighborKey = `${neighbor.x},${neighbor.y}`;
+            if (!unvisited.has(neighborKey)) return;
+
+            const newPressure = maxPressure - pressureDrop;
+            if (newPressure > pressureMap[neighborKey].pressure) {
+                pressureMap[neighborKey].pressure = newPressure;
+            }
+        });
+    }
+
+    return pressureMap;
+}
 function moveRedEvade() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
 
-    const isAdjacentToBlue = Math.abs(bluePos.x - redPos.x) + Math.abs(bluePos.y - redPos.y) === 1;
+    // Calculate pressure from blue point
+    const pressureMap = calculatePressureMap(bluePos);
+    
+    // Score moves based on inverse pressure and escape routes
+    const scoredMoves = validMoves.map(move => {
+        const key = `${move.x},${move.y}`;
+        const pressure = pressureMap[key].pressure;
+        const escapeRoutes = getValidMoves(move).length;
+        
+        // Calculate future mobility
+        let futureMobility = 0;
+        const futurePositions = getValidMoves(move);
+        futurePositions.forEach(pos => {
+            futureMobility += getValidMoves(pos).length;
+        });
 
-    if (isAdjacentToBlue) {
-        const escapeMoves = validMoves.filter(move => 
-            Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y) > 1
-        );
-        if (escapeMoves.length > 0) {
-            redPos = escapeMoves[Math.floor(Math.random() * escapeMoves.length)];
-            return true;
-        }
-    }
+        return {
+            pos: move,
+            score: (1 - pressure) * // Lower pressure is better for evading
+                  (escapeRoutes / 4) * // More escape routes are better
+                  (1 + futureMobility / 8) // Better future mobility preferred
+        };
+    });
 
-    // Score moves based on distance from blue
-    const scoredMoves = validMoves.map(move => ({
-        move,
-        score: Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y)
-    }));
-
+    // Choose move with lowest pressure (furthest from blue)
     scoredMoves.sort((a, b) => b.score - a.score);
-    redPos = scoredMoves[0].move;
+    
+    // Add randomization among top moves
+    const topMoves = scoredMoves.slice(0, Math.min(2, scoredMoves.length));
+    const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)];
+    
+    redPos = selectedMove.pos;
     return true;
 }
 
 function moveRedAttack() {
-    const path = findShortestPath(redPos, bluePos);
-    if (!path || path.length < 2) return false;
+    const validMoves = getValidMoves(redPos);
+    if (validMoves.length === 0) return false;
+
+    // Calculate pressure from blue point (source)
+    const pressureMap = calculatePressureMap(bluePos);
     
-    // Move one step along the shortest path
-    redPos = path[1];
+    // Score moves based on pressure and path availability
+    const scoredMoves = validMoves.map(move => {
+        const key = `${move.x},${move.y}`;
+        const pressure = pressureMap[key].pressure;
+        const connectivity = getValidMoves(move).length;
+        
+        return {
+            pos: move,
+            score: pressure * (1 + (connectivity / 4)) // Higher pressure is better for attacking
+        };
+    });
+
+    // Choose move with highest pressure (closest to blue)
+    scoredMoves.sort((a, b) => b.score - a.score);
+    
+    // Add slight randomization among top moves
+    const topMoves = scoredMoves.slice(0, Math.min(2, scoredMoves.length));
+    const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)];
+    
+    redPos = selectedMove.pos;
     return true;
 }
 
