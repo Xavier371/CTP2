@@ -253,40 +253,37 @@ function findShortestPath(start, end) {
 const ATTACK_FORCE = 1.5;
 const EVADE_FORCE = 1.2;
 
-function moveRedEvade() {
+function moveRedAttack() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
 
+    // Get all points two moves away from blue's position
+    const twoMovesFromBlue = [];
+    const blueNeighbors = getValidMoves(bluePos);
+    blueNeighbors.forEach(neighbor => {
+        const nextMoves = getValidMoves(neighbor);
+        nextMoves.forEach(move => {
+            if (!twoMovesFromBlue.some(p => p.x === move.x && p.y === move.y)) {
+                twoMovesFromBlue.push(move);
+            }
+        });
+    });
+
     // Score each possible move
     const scoredMoves = validMoves.map(move => {
-        let score = 0;
-
-        // Base repulsion force (like same charge repulsion)
+        // Base attraction force
         const distance = Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y);
-        score += EVADE_FORCE * distance;
+        let score = ATTACK_FORCE / (distance || 0.1);
 
-        // Emergency escape if blue is adjacent
-        const isAdjacentToBlue = Math.abs(bluePos.x - move.x) + Math.abs(bluePos.y - move.y) === 1;
-        if (isAdjacentToBlue) {
-            score -= 10; // Strong penalty for being adjacent
+        // Bonus for being on a two-move path to blue
+        if (twoMovesFromBlue.some(p => p.x === move.x && p.y === move.y)) {
+            score += 2;
         }
 
-        // Check escape routes
-        const escapeRoutes = getValidMoves(move).length;
-        score += escapeRoutes * 3; // Strongly prefer positions with more escape routes
-
-        // Avoid corners unless necessary
-        if ((move.x === 0 || move.x === GRID_SIZE - 1) && (move.y === 0 || move.y === GRID_SIZE - 1)) {
-            score -= 5; // Penalty for being in a corner
-        } else if (move.x === 0 || move.x === GRID_SIZE - 1 || 
-                   move.y === 0 || move.y === GRID_SIZE - 1) {
-            score += 2; // Bonus for being on an edge
-        }
-
-        // Check if move maintains path to border
-        const pathToBorder = findPathToBorder(move);
-        if (pathToBorder) {
-            score += 4; // Strong bonus for maintaining escape route to border
+        // Direct path bonus
+        const pathToBlue = findShortestPath(move, bluePos);
+        if (pathToBlue) {
+            score += 1 / pathToBlue.length;
         }
 
         return { move, score };
@@ -297,6 +294,7 @@ function moveRedEvade() {
     redPos = scoredMoves[0].move;
     return true;
 }
+
 function moveRedEvade() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
