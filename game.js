@@ -299,45 +299,55 @@ function moveRedEvade() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
 
-    // Score each possible move
+    // Score each possible move based on the longest path away from blue
     const scoredMoves = validMoves.map(move => {
-        let score = 0;
-
-        // Base repulsion force (like same charge repulsion)
+        // Calculate the distance from the blue point
         const distance = Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y);
-        score += EVADE_FORCE * distance;
 
-        // Emergency escape if blue is adjacent
-        const isAdjacentToBlue = Math.abs(bluePos.x - move.x) + Math.abs(bluePos.y - move.y) === 1;
-        if (isAdjacentToBlue) {
-            score -= 10; // Strong penalty for being adjacent
-        }
+        // Find the longest path from this move
+        const longestPath = findLongestPathAwayFromBlue(move);
 
-        // Check escape routes
-        const escapeRoutes = getValidMoves(move).length;
-        score += escapeRoutes * 3; // Strongly prefer positions with more escape routes
-
-        // Avoid corners unless necessary
-        if ((move.x === 0 || move.x === GRID_SIZE - 1) && (move.y === 0 || move.y === GRID_SIZE - 1)) {
-            score -= 5; // Penalty for being in a corner
-        } else if (move.x === 0 || move.x === GRID_SIZE - 1 || 
-                   move.y === 0 || move.y === GRID_SIZE - 1) {
-            score += 2; // Bonus for being on an edge
-        }
-
-        // Check if move maintains path to border
-        const pathToBorder = findPathToBorder(move);
-        if (pathToBorder) {
-            score += 4; // Strong bonus for maintaining escape route to border
-        }
+        // Score is based on the path length and distance from blue
+        const score = longestPath.length + EVADE_FORCE * distance;
 
         return { move, score };
     });
 
-    // Choose the move with highest score
+    // Choose the move with the highest score
     scoredMoves.sort((a, b) => b.score - a.score);
     redPos = scoredMoves[0].move;
     return true;
+}
+
+// Helper function to find the longest path away from the blue point
+function findLongestPathAwayFromBlue(start) {
+    const visited = new Set();
+    const queue = [[start]];
+    let longestPath = [];
+
+    while (queue.length > 0) {
+        const path = queue.shift();
+        const current = path[path.length - 1];
+        const key = `${current.x},${current.y}`;
+
+        if (visited.has(key)) continue;
+        visited.add(key);
+
+        const moves = getValidMoves(current);
+        moves.forEach(move => {
+            if (!visited.has(`${move.x},${move.y}`)) {
+                const newPath = [...path, move];
+                queue.push(newPath);
+
+                // Update longest path if this one is longer
+                if (newPath.length > longestPath.length) {
+                    longestPath = newPath;
+                }
+            }
+        });
+    }
+
+    return longestPath;
 }
 
 // Helper function for evade
