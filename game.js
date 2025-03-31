@@ -315,12 +315,14 @@ function moveRedEvade() {
 
         // Check escape routes
         const escapeRoutes = getValidMoves(move).length;
-        score += escapeRoutes * 2; // Strongly prefer positions with more escape routes
+        score += escapeRoutes * 3; // Strongly prefer positions with more escape routes
 
-        // Edge proximity bonus
-        if (move.x === 0 || move.x === GRID_SIZE - 1 || 
-            move.y === 0 || move.y === GRID_SIZE - 1) {
-            score += 3; // Bonus for being on an edge
+        // Avoid corners unless necessary
+        if ((move.x === 0 || move.x === GRID_SIZE - 1) && (move.y === 0 || move.y === GRID_SIZE - 1)) {
+            score -= 5; // Penalty for being in a corner
+        } else if (move.x === 0 || move.x === GRID_SIZE - 1 || 
+                   move.y === 0 || move.y === GRID_SIZE - 1) {
+            score += 2; // Bonus for being on an edge
         }
 
         // Check if move maintains path to border
