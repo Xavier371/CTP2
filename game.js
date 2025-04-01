@@ -481,8 +481,12 @@ function handleMove(key) {
             }
         }
     } else {
-        // Single-player mode logic - Arrow keys only for blue
-        const oldPos = { ...bluePos };
+        // ---------- NEW TURN ORDER ----------
+        // Single-player mode = Blue inputs a move, BUT Red moves FIRST
+
+        const oldBluePos = { ...bluePos };
+
+        // Blue's intended move
         switch (key) {
             case 'ArrowLeft': if (bluePos.x > 0) bluePos.x--; break;
             case 'ArrowRight': if (bluePos.x < GRID_SIZE - 1) bluePos.x++; break;
@@ -491,22 +495,33 @@ function handleMove(key) {
             default: return;
         }
 
-        if (canMove(oldPos, bluePos)) {
-            removeRandomEdge();
+        // Blue's move is only valid if there is an edge
+        if (canMove(oldBluePos, bluePos)) {
+
+            // ✅ Step 1: Red PRE-moves BEFORE Blue
             if (!checkGameOver()) {
+
                 if (gameMode === 'offense') {
-                    moveRedEvade();
-                } else {
-                    moveRedAttack();
+                    moveRedEvade();   // Red runs FIRST
+                } else if (gameMode === 'defense') {
+                    moveRedAttack();  // Red attacks FIRST
                 }
+
+                // ✅ Step 2: Blue's move is now finalized
+                // (we already updated bluePos above)
+
+                // ✅ Step 3: Remove TWO edges after both moved
                 removeRandomEdge();
+                removeRandomEdge();
+
+                // ✅ Step 4: Check win condition AFTER both moved
                 checkGameOver();
             }
         } else {
-            bluePos = oldPos;
+            bluePos = oldBluePos; // revert if illegal move
         }
     }
-    
+
     drawGame();
 }
 
