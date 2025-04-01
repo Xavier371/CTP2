@@ -260,7 +260,7 @@ function moveRedAttack() {
         redPos = path[1];  // first step on the true shortest path
         return true;
     }
-    return false; // if Red is stuck
+    return false; // if stuck
 }
 
 
@@ -279,33 +279,45 @@ function moveRedEvade() {
     const scoredMoves = validMoves.map(move => {
         let score = 0;
 
-        // How far will Red be from Blue after this move?
+        // Distance after this move
         const path = findShortestPath(move, bluePos);
         const dist = path ? path.length : 0;
         score += dist * 10;
 
-        // Escape routes from the move itself
+        // Immediate escape options
         const escapeRoutes = getValidMoves(move).length;
         score += escapeRoutes * 2;
 
-        // --- Escape-safe Bonus ---
-        // Simulate next move: will Red still have good options?
-        const futureOptions = getValidMoves(move).reduce((sum, nextMove) => {
-            const nextPath = findShortestPath(nextMove, bluePos);
-            const nextDist = nextPath ? nextPath.length : 0;
-            return sum + nextDist; // total future distance options
-        }, 0);
-        score += futureOptions * 1; // reward staying safe
+        // ---------- DEPTH 4 PLANNING ----------
+
+        // Sum of distances Red could achieve in the next 3 moves
+        let futureSum = 0;
+        const level1 = getValidMoves(move);
+        level1.forEach(pos1 => {
+            const level2 = getValidMoves(pos1);
+            level2.forEach(pos2 => {
+                const level3 = getValidMoves(pos2);
+                level3.forEach(pos3 => {
+                    const path3 = findShortestPath(pos3, bluePos);
+                    const d3 = path3 ? path3.length : 0;
+                    futureSum += d3;
+                });
+            });
+        });
+
+        score += futureSum * 0.5; // tune this weight if needed
+
+        // -------------------------------------
 
         return { move, score };
     });
 
-    // Choose the safest + longest path
     scoredMoves.sort((a, b) => b.score - a.score);
     redPos = scoredMoves[0].move;
 
     return true;
 }
+
 
 
 
