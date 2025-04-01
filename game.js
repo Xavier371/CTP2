@@ -257,10 +257,10 @@ const EVADE_FORCE = 3;
 function moveRedAttack() {
     const path = findShortestPath(redPos, bluePos);
     if (path && path.length >= 2) {
-        redPos = path[1];  // follow the first step towards Blue
+        redPos = path[1];  // first step on the true shortest path
         return true;
     }
-    return false; // if trapped
+    return false; // if Red is stuck
 }
 
 
@@ -273,45 +273,33 @@ function predictBlueMove() {
     return bluePos; // Fallback if no path
 }
 function moveRedEvade() {
-    let validMoves = getValidMoves(redPos);
+    const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
-
-    const predictedBlueNext = predictBlueMove();
-
-    if (Math.abs(redPos.x - bluePos.x) + Math.abs(redPos.y - bluePos.y) === 1) {
-        validMoves = validMoves.filter(move => {
-            const currentDist = findShortestPath(redPos, bluePos)?.length || 1;
-            const newDist = findShortestPath(move, predictedBlueNext)?.length || 0;
-            return newDist >= currentDist;
-        });
-        if (validMoves.length === 0) validMoves = getValidMoves(redPos);
-    }
 
     const scoredMoves = validMoves.map(move => {
         let score = 0;
 
-        if (move.x === predictedBlueNext.x && move.y === predictedBlueNext.y) score -= 50;
-        const isAdjacent = Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y) === 1;
-        if (isAdjacent) score -= 100;
-
+        // Red wants the move that maximizes the distance from Blue
         const path = findShortestPath(move, bluePos);
-        const dist = path ? path.length : 0.5;
-        score += EVADE_FORCE * dist;
+        const dist = path ? path.length : 0; // fallback if no path
 
+        // Score: prioritize distance
+        score += dist * 10;
+
+        // Bonus: prefer moves with multiple escape routes
         const escapeRoutes = getValidMoves(move).length;
         score += escapeRoutes * 2;
-
-        if (move.x === 0 || move.x === GRID_SIZE - 1 || move.y === 0 || move.y === GRID_SIZE - 1) score += 2;
-
-        if (findPathToBorder(move)) score += 4;
 
         return { move, score };
     });
 
+    // Pick move with the highest score
     scoredMoves.sort((a, b) => b.score - a.score);
     redPos = scoredMoves[0].move;
+
     return true;
 }
+
 
 
 // Helper function for evade
