@@ -235,65 +235,34 @@ function findShortestPath(start, end) {
         const current = path[path.length - 1];
         const key = `${current.x},${current.y}`;
         
-        if (current.x === end.x && current.y === end.y) return path;
+        if (current.x === end.x && current.y === end.y) return path; // found it
         if (visited.has(key)) continue;
         
         visited.add(key);
         const moves = getValidMoves(current);
         moves.forEach(move => {
             if (!visited.has(`${move.x},${move.y}`)) {
-                queue.push([...path, move]);
+                queue.push([...path, move]); // grow the path by 1 step
             }
         });
     }
-    
     return null;
 }
+
 // Add these constants at the top with your other constants
 const ATTACK_FORCE = 2;
 const EVADE_FORCE = 3;
 
+// Optimal: Red always takes the first step on the real shortest path
 function moveRedAttack() {
-    const validMoves = getValidMoves(redPos);
-    if (validMoves.length === 0) return false;
-
-    // Get all points two moves away from blue's position
-    const twoMovesFromBlue = [];
-    const blueNeighbors = getValidMoves(bluePos);
-    blueNeighbors.forEach(neighbor => {
-        const nextMoves = getValidMoves(neighbor);
-        nextMoves.forEach(move => {
-            if (!twoMovesFromBlue.some(p => p.x === move.x && p.y === move.y)) {
-                twoMovesFromBlue.push(move);
-            }
-        });
-    });
-
-    // Score each possible move
-    const scoredMoves = validMoves.map(move => {
-        // Base attraction force
-        const distance = Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y);
-        let score = ATTACK_FORCE / (distance || 0.1);
-
-        // Bonus for being on a two-move path to blue
-        if (twoMovesFromBlue.some(p => p.x === move.x && p.y === move.y)) {
-            score += 2;
-        }
-
-        // Direct path bonus
-        const pathToBlue = findShortestPath(move, bluePos);
-        if (pathToBlue) {
-            score += 1 / pathToBlue.length;
-        }
-
-        return { move, score };
-    });
-
-    // Choose the move with highest score
-    scoredMoves.sort((a, b) => b.score - a.score);
-    redPos = scoredMoves[0].move;
-    return true;
+    const path = findShortestPath(redPos, bluePos);
+    if (path && path.length >= 2) {
+        redPos = path[1];  // follow the first step towards Blue
+        return true;
+    }
+    return false; // if trapped
 }
+
 
 function predictBlueMove() {
     // Predict the first move Blue would take towards Red
@@ -309,43 +278,31 @@ function moveRedEvade() {
 
     const predictedBlueNext = predictBlueMove();
 
-    // Red avoids stepping closer along Blue's predicted path if currently adjacent
     if (Math.abs(redPos.x - bluePos.x) + Math.abs(redPos.y - bluePos.y) === 1) {
         validMoves = validMoves.filter(move => {
             const currentDist = findShortestPath(redPos, bluePos)?.length || 1;
             const newDist = findShortestPath(move, predictedBlueNext)?.length || 0;
-            return newDist >= currentDist; // Avoid stepping closer
+            return newDist >= currentDist;
         });
-        if (validMoves.length === 0) validMoves = getValidMoves(redPos); // fallback if stuck
+        if (validMoves.length === 0) validMoves = getValidMoves(redPos);
     }
 
     const scoredMoves = validMoves.map(move => {
         let score = 0;
 
-        // Avoid predicted Blue's next tile
-        if (move.x === predictedBlueNext.x && move.y === predictedBlueNext.y) {
-            score -= 50; // don't step where Blue is expected
-        }
-
-        // Penalize direct adjacency
+        if (move.x === predictedBlueNext.x && move.y === predictedBlueNext.y) score -= 50;
         const isAdjacent = Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y) === 1;
         if (isAdjacent) score -= 100;
 
-        // Favor long path escape
         const path = findShortestPath(move, bluePos);
         const dist = path ? path.length : 0.5;
         score += EVADE_FORCE * dist;
 
-        // Escape routes
         const escapeRoutes = getValidMoves(move).length;
         score += escapeRoutes * 2;
 
-        // Edge bonus
-        if (move.x === 0 || move.x === GRID_SIZE - 1 || move.y === 0 || move.y === GRID_SIZE - 1) {
-            score += 2;
-        }
+        if (move.x === 0 || move.x === GRID_SIZE - 1 || move.y === 0 || move.y === GRID_SIZE - 1) score += 2;
 
-        // Path to border bonus
         if (findPathToBorder(move)) score += 4;
 
         return { move, score };
@@ -355,6 +312,7 @@ function moveRedEvade() {
     redPos = scoredMoves[0].move;
     return true;
 }
+
 
 // Helper function for evade
 function findPathToBorder(pos) {
