@@ -143,7 +143,6 @@ function drawGame() {
         }
     });
 
-    // Draw points
     const drawPoint = (pos, color) => {
         ctx.beginPath();
         ctx.arc(
@@ -160,9 +159,14 @@ function drawGame() {
         ctx.stroke();
     };
 
-    if (bluePos.x === redPos.x && bluePos.y === redPos.y) {
-        drawPoint(bluePos, '#8A2BE2'); // Purple when overlapping
+    if (gameOver && gameMode === 'defense') {
+        // In defense mode when game is over, only show purple point at red's position
+        drawPoint(redPos, '#8A2BE2');
+    } else if (gameOver && bluePos.x === redPos.x && bluePos.y === redPos.y) {
+        // For other modes when points overlap
+        drawPoint(bluePos, '#8A2BE2');
     } else {
+        // Normal gameplay - draw both points
         drawPoint(redPos, 'red');
         drawPoint(bluePos, 'blue');
     }
