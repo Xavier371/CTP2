@@ -250,8 +250,8 @@ function findShortestPath(start, end) {
     return null;
 }
 // Add these constants at the top with your other constants
-const ATTACK_FORCE = 1.5;
-const EVADE_FORCE = 1.2;
+const ATTACK_FORCE = 2;
+const EVADE_FORCE = 3;
 
 function moveRedAttack() {
     const validMoves = getValidMoves(redPos);
