@@ -159,11 +159,11 @@ function drawGame() {
         ctx.stroke();
     };
 
-    if (gameOver && gameMode === 'defense') {
-        // When game is over in defense mode, only show one purple point at red's position
-        drawPoint(redPos, '#8A2BE2');
-    } else if (!gameOver) {
-        // During normal gameplay, draw both points
+    if (gameOver && document.getElementById('message').textContent.includes('Caught')) {
+        // Only show purple point when game ends by catching/crossing
+        drawPoint(gameMode === 'defense' ? redPos : bluePos, '#8A2BE2');
+    } else {
+        // All other cases (including separated points), show both points normally
         drawPoint(redPos, 'red');
         drawPoint(bluePos, 'blue');
     }
