@@ -235,81 +235,81 @@ function findShortestPath(start, end) {
         const current = path[path.length - 1];
         const key = `${current.x},${current.y}`;
         
-        if (current.x === end.x && current.y === end.y) return path; // found it
+        if (current.x === end.x && current.y === end.y) return path;
         if (visited.has(key)) continue;
         
         visited.add(key);
         const moves = getValidMoves(current);
         moves.forEach(move => {
             if (!visited.has(`${move.x},${move.y}`)) {
-                queue.push([...path, move]); // grow the path by 1 step
+                queue.push([...path, move]);
             }
         });
     }
+    
     return null;
 }
-
 // Add these constants at the top with your other constants
 const ATTACK_FORCE = 2;
 const EVADE_FORCE = 3;
 
-// Optimal: Red always takes the first step on the real shortest path
+function checkCrossPath(oldBlue, newBlue, oldRed, newRed) {
+    // Direct capture
+    if (newBlue.x === newRed.x && newBlue.y === newRed.y) return true;
+
+    // Cross over capture (swap positions)
+    if (oldBlue.x === newRed.x && oldBlue.y === newRed.y &&
+        oldRed.x === newBlue.x && oldRed.y === newBlue.y) return true;
+
+    return false;
+}
+
 function moveRedAttack() {
     const path = findShortestPath(redPos, bluePos);
     if (path && path.length >= 2) {
-        redPos = path[1];  // first step on the true shortest path
+        redPos = path[1]; // Take the first step on the real shortest path
         return true;
     }
-    return false; // if stuck
-}
-
-
-function predictBlueMove() {
-    // Predict the first move Blue would take towards Red
-    const path = findShortestPath(bluePos, redPos);
-    if (path && path.length >= 2) {
-        return path[1]; // The first step Blue will likely take
-    }
-    return bluePos; // Fallback if no path
+    return false; // Red is trapped
 }
 function moveRedEvade() {
     const validMoves = getValidMoves(redPos);
     if (validMoves.length === 0) return false;
 
-    // Score each possible move
-    const scoredMoves = validMoves.map(move => {
-        let score = 0;
+    let bestMove = redPos;
+    let bestScore = -Infinity;
 
-        // Get the shortest path from blue to this potential move
-        const pathFromBlue = findShortestPath(bluePos, move);
-        if (!pathFromBlue) {
-            // If blue can't reach this position, it's excellent
-            score += 1000;
-        } else {
-            // Otherwise, prefer positions farther from blue
-            score += pathFromBlue.length * 10;
-        }
+    validMoves.forEach(move => {
+        // Avoid immediate adjacency to Blue
+        if (Math.abs(move.x - bluePos.x) + Math.abs(move.y - bluePos.y) <= 1) return;
 
-        // Heavily penalize moves that bring red closer to blue
-        const currentDistToBlue = findShortestPath(bluePos, redPos)?.length || 0;
-        const newDistToBlue = pathFromBlue?.length || 0;
-        if (newDistToBlue < currentDistToBlue) {
-            score -= 500;
-        }
+        // Predict where Blue could move next turn
+        const futureBlueMoves = getValidMoves(bluePos);
+        let minFutureDist = Infinity;
 
-        // Prefer moves with more escape routes
+        futureBlueMoves.forEach(blueMove => {
+            const futureDist = findShortestPath(blueMove, move)?.length || 0;
+            if (futureDist < minFutureDist) minFutureDist = futureDist;
+        });
+
+        // Score combines future distance and escape routes
+        let score = minFutureDist * 10;
+
+        // Escape route bonus
         const escapeRoutes = getValidMoves(move).length;
-        score += escapeRoutes * 5;
+        score += escapeRoutes * 3;
 
-        return { move, score };
+        if (score > bestScore) {
+            bestScore = score;
+            bestMove = move;
+        }
     });
 
-    // Choose the move with highest score
-    scoredMoves.sort((a, b) => b.score - a.score);
-    redPos = scoredMoves[0].move;
+    redPos = bestMove;
     return true;
 }
 
+// --- FINALIZED moveRedAttack() ---
 
 
 // Helper function for evade
@@ -396,99 +396,83 @@ document.addEventListener('touchmove', function(e) {
 
 
 function checkGameOver() {
-    // Blue wins if it lands on or crosses through red's position
     if (bluePos.x === redPos.x && bluePos.y === redPos.y) {
         gameOver = true;
-        document.getElementById('message').textContent = 'Blue Wins - Caught Red!';
+        if (gameMode === 'offense') {
+            document.getElementById('message').textContent = 'Blue Wins - Points are joined';
+        } else if (gameMode === 'defense') {
+            document.getElementById('message').textContent = 'Red Wins - Points are joined';
+        } else {
+            document.getElementById('message').textContent = 'Blue Wins - Points are joined';
+        }
         return true;
     }
     
-    // Check if points are completely separated
     const path = findShortestPath(bluePos, redPos);
     if (!path) {
         gameOver = true;
-        document.getElementById('message').textContent = 'Red Wins - Points are separated!';
+        if (gameMode === 'offense') {
+            document.getElementById('message').textContent = 'Red Wins - Points are separated';
+        } else if (gameMode === 'defense') {
+            document.getElementById('message').textContent = 'Blue Wins - Points are separated';
+        } else {
+            document.getElementById('message').textContent = 'Red Wins - Points are separated';
+        }
         return true;
     }
     
     return false;
-}
-}
-
-let pendingBlueMove = null; // stores Blue's chosen move until Red finishes
-
-
-function arePointsCrossingEdge(oldBluePos, newBluePos, oldRedPos, newRedPos) {
-    // Check if points are trying to swap positions
-    return (
-        newBluePos.x === oldRedPos.x && newBluePos.y === oldRedPos.y &&
-        newRedPos.x === oldBluePos.x && newRedPos.y === oldBluePos.y &&
-        canMove(oldBluePos, newBluePos) // Verify there's an active edge between them
-    );
 }
 
 function handleMove(key) {
     if (gameOver) return;
 
     if (gameMode !== 'twoPlayer') {
-        const oldBluePos = { ...bluePos };
-        let newBluePos = { ...bluePos };
-        
-        // Calculate blue's intended move
+        const oldBlue = { ...bluePos };
+        let proposedBlue = { ...bluePos };
+
         switch (key) {
-            case 'ArrowLeft': if (bluePos.x > 0) newBluePos.x--; break;
-            case 'ArrowRight': if (bluePos.x < GRID_SIZE - 1) newBluePos.x++; break;
-            case 'ArrowUp': if (bluePos.y > 0) newBluePos.y--; break;
-            case 'ArrowDown': if (bluePos.y < GRID_SIZE - 1) newBluePos.y++; break;
+            case 'ArrowLeft': if (bluePos.x > 0) proposedBlue.x--; break;
+            case 'ArrowRight': if (bluePos.x < GRID_SIZE - 1) proposedBlue.x++; break;
+            case 'ArrowUp': if (bluePos.y > 0) proposedBlue.y--; break;
+            case 'ArrowDown': if (bluePos.y < GRID_SIZE - 1) proposedBlue.y++; break;
             default: return;
         }
 
-        // Validate blue's move
-        if (!canMove(oldBluePos, newBluePos)) {
-            return;
+        if (!canMove(oldBlue, proposedBlue)) return;
+
+        // Pre-move, don't commit yet
+        const oldRed = { ...redPos };
+
+        if (gameMode === 'offense') {
+            moveRedEvade();
+        } else {
+            moveRedAttack();
         }
 
-        // Check if blue's move would land on or cross through red
-        if (newBluePos.x === redPos.x && newBluePos.y === redPos.y) {
+        const proposedRed = { ...redPos };
+        bluePos = proposedBlue;
+        redPos = proposedRed;
+
+        // ✅ Check for normal or cross-path capture
+        if (checkCrossPath(oldBlue, bluePos, oldRed, redPos)) {
             gameOver = true;
-            bluePos = newBluePos;
             document.getElementById('message').textContent = 'Blue Wins - Caught Red!';
             drawGame();
             return;
         }
 
-        // Store red's current position
-        const oldRedPos = { ...redPos };
-
-        // Move blue
-        bluePos = newBluePos;
-
-        // Remove an edge
+        removeRandomEdge();
         removeRandomEdge();
 
-        // Let red move if game isn't over
-        if (!checkGameOver()) {
-            if (gameMode === 'offense') {
-                moveRedEvade();
-            } else {
-                moveRedAttack();
-            }
-
-            // Check if red moved to where blue was (crossing paths)
-            if (redPos.x === oldBluePos.x && redPos.y === oldBluePos.y) {
-                gameOver = true;
-                document.getElementById('message').textContent = 'Blue Wins - Caught Red!';
-                drawGame();
-                return;
-            }
-
-            removeRandomEdge();
-            checkGameOver();
+        if (checkGameOver()) {
+            drawGame();
+            return;
         }
 
         drawGame();
     } else {
-        // Two player mode logic remains unchanged
+        // ✅ Leave 2P mode unchanged
         if (redTurn) {
             const oldPos = { ...redPos };
             switch (key.toLowerCase()) {
@@ -508,9 +492,8 @@ function handleMove(key) {
                 case 'ArrowDown': if (bluePos.y < GRID_SIZE - 1) bluePos.y++; break;
                 default: return;
             }
-            if (!canMove(oldPos, bluePos)) {
-                bluePos = oldPos;
-            } else {
+            if (!canMove(oldPos, bluePos)) bluePos = oldPos;
+            else {
                 redTurn = true;
                 removeRandomEdge();
                 removeRandomEdge();
