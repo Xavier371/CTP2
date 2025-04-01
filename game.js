@@ -435,14 +435,37 @@ function checkGameOver() {
 
 let pendingBlueMove = null; // stores Blue's chosen move until Red finishes
 
+
+function arePointsCrossingEdge(oldBluePos, newBluePos, oldRedPos, newRedPos) {
+    return edges.some(edge => {
+        if (!edge.active) return false;
+        
+        // Check if blue is crossing this edge
+        const blueUsingEdge = (
+            (edge.x1 === oldBluePos.x && edge.y1 === oldBluePos.y && edge.x2 === newBluePos.x && edge.y2 === newBluePos.y) ||
+            (edge.x2 === oldBluePos.x && edge.y2 === oldBluePos.y && edge.x1 === newBluePos.x && edge.y1 === newBluePos.y)
+        );
+        
+        // Check if red is crossing this edge in the opposite direction
+        const redUsingEdge = (
+            (edge.x1 === oldRedPos.x && edge.y1 === oldRedPos.y && edge.x2 === newRedPos.x && edge.y2 === newRedPos.y) ||
+            (edge.x2 === oldRedPos.x && edge.y2 === oldRedPos.y && edge.x1 === newRedPos.x && edge.y1 === newRedPos.y)
+        );
+        
+        return blueUsingEdge && redUsingEdge;
+    });
+}
+
 function handleMove(key) {
     if (gameOver) return;
 
     // Only Blue picks manually in single-player mode
     if (gameMode !== 'twoPlayer') {
         if (!pendingBlueMove) {
+            const oldBluePos = { ...bluePos };
+            const oldRedPos = { ...redPos };
+            
             // Step 1: Blue chooses
-            const oldPos = { ...bluePos };
             switch (key) {
                 case 'ArrowLeft': if (bluePos.x > 0) pendingBlueMove = { x: bluePos.x - 1, y: bluePos.y }; break;
                 case 'ArrowRight': if (bluePos.x < GRID_SIZE - 1) pendingBlueMove = { x: bluePos.x + 1, y: bluePos.y }; break;
@@ -453,15 +476,24 @@ function handleMove(key) {
 
             // Step 2: Validate Blue's intended move
             if (!canMove(bluePos, pendingBlueMove)) {
-                pendingBlueMove = null; // cancel if illegal
+                pendingBlueMove = null;
                 return;
             }
 
-            // Step 3: Red now plans its move (without actually moving)
+            // Step 3: Red plans its move
             if (gameMode === 'offense') {
                 moveRedEvade();
             } else {
                 moveRedAttack();
+            }
+
+            // Check if points are crossing the same edge
+            if (arePointsCrossingEdge(oldBluePos, pendingBlueMove, oldRedPos, redPos)) {
+                gameOver = true;
+                bluePos = pendingBlueMove; // Move blue to final position
+                document.getElementById('message').textContent = 'Blue Wins - Points crossed paths';
+                drawGame();
+                return;
             }
 
             // Step 4: Both move simultaneously
@@ -479,11 +511,9 @@ function handleMove(key) {
             }
 
             drawGame();
-
         }
-
     } else {
-        // --- TWO PLAYER MODE (optional) ---
+        // Two player mode logic remains unchanged
         if (redTurn) {
             const oldPos = { ...redPos };
             switch (key.toLowerCase()) {
@@ -520,7 +550,6 @@ function handleMove(key) {
         drawGame();
     }
 }
-
 
 function toggleMode() {
     if (gameMode === 'offense') {
