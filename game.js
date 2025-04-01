@@ -160,13 +160,10 @@ function drawGame() {
     };
 
     if (gameOver && gameMode === 'defense') {
-        // In defense mode when game is over, only show purple point at red's position
+        // When game is over in defense mode, only show one purple point at red's position
         drawPoint(redPos, '#8A2BE2');
-    } else if (gameOver && bluePos.x === redPos.x && bluePos.y === redPos.y) {
-        // For other modes when points overlap
-        drawPoint(bluePos, '#8A2BE2');
-    } else {
-        // Normal gameplay - draw both points
+    } else if (!gameOver) {
+        // During normal gameplay, draw both points
         drawPoint(redPos, 'red');
         drawPoint(bluePos, 'blue');
     }
@@ -461,7 +458,11 @@ function handleMove(key) {
         // ✅ Check for normal or cross-path capture
         if (checkCrossPath(oldBlue, bluePos, oldRed, redPos)) {
             gameOver = true;
-            document.getElementById('message').textContent = 'Blue Wins - Caught Red!';
+            if (gameMode === 'defense') {
+                document.getElementById('message').textContent = 'Red Wins - Caught Blue!';
+            } else {
+                document.getElementById('message').textContent = 'Blue Wins - Caught Red!';
+            }
             drawGame();
             return;
         }
