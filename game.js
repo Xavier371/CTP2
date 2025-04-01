@@ -159,11 +159,14 @@ function drawGame() {
         ctx.stroke();
     };
 
-    if (gameOver && document.getElementById('message').textContent.includes('Caught')) {
-        // Only show purple point when game ends by catching/crossing
+    if ((gameOver && document.getElementById('message').textContent.includes('Caught')) || 
+        (gameMode === 'twoPlayer' && bluePos.x === redPos.x && bluePos.y === redPos.y)) {
+        // Show purple point when:
+        // 1. Game ends by catching/crossing in single player modes
+        // 2. Points overlap in two player mode
         drawPoint(gameMode === 'defense' ? redPos : bluePos, '#8A2BE2');
     } else {
-        // All other cases (including separated points), show both points normally
+        // All other cases, show both points normally
         drawPoint(redPos, 'red');
         drawPoint(bluePos, 'blue');
     }
