@@ -212,7 +212,7 @@ function createGrid() {
 function addAxesAtCorner() {
     const totalSize = GRID_SIZE * UNIT_SIZE;
     const axisLength = totalSize;
-    const axisWidth = IS_MOBILE ? 5 : 3; // Thicker lines for mobile
+    const axisWidth = IS_MOBILE ? 7 : 3; // Even thicker lines for mobile
     
     // Create the X-axis (red, left/right)
     const xAxisGeo = new THREE.BufferGeometry();
@@ -224,8 +224,8 @@ function addAxesAtCorner() {
     const xAxis = new THREE.Line(xAxisGeo, xAxisMat);
     gameGroup.add(xAxis);
     
-    // Add red arrow for X-axis - LARGER on mobile
-    const xArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.45 : 0.2, IS_MOBILE ? 0.9 : 0.4, 12);
+    // Add red arrow for X-axis - MUCH LARGER on mobile
+    const xArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.8 : 0.2, IS_MOBILE ? 1.6 : 0.4, 12);
     const xArrowMat = new THREE.MeshBasicMaterial({ color: COLORS.xAxis });
     const xArrow = new THREE.Mesh(xArrowGeo, xArrowMat);
     xArrow.position.set(axisLength, 0, 0);
@@ -242,8 +242,8 @@ function addAxesAtCorner() {
     const yAxis = new THREE.Line(yAxisGeo, yAxisMat);
     gameGroup.add(yAxis);
     
-    // Add green arrow for Y-axis - LARGER on mobile
-    const yArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.45 : 0.2, IS_MOBILE ? 0.9 : 0.4, 12);
+    // Add green arrow for Y-axis - MUCH LARGER on mobile
+    const yArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.8 : 0.2, IS_MOBILE ? 1.6 : 0.4, 12);
     const yArrowMat = new THREE.MeshBasicMaterial({ color: COLORS.yAxis });
     const yArrow = new THREE.Mesh(yArrowGeo, yArrowMat);
     yArrow.position.set(0, axisLength, 0);
@@ -259,8 +259,8 @@ function addAxesAtCorner() {
     const zAxis = new THREE.Line(zAxisGeo, zAxisMat);
     gameGroup.add(zAxis);
     
-    // Add blue arrow for Z-axis - LARGER on mobile
-    const zArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.45 : 0.2, IS_MOBILE ? 0.9 : 0.4, 12);
+    // Add blue arrow for Z-axis - MUCH LARGER on mobile
+    const zArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.8 : 0.2, IS_MOBILE ? 1.6 : 0.4, 12);
     const zArrowMat = new THREE.MeshBasicMaterial({ color: COLORS.zAxis });
     const zArrow = new THREE.Mesh(zArrowGeo, zArrowMat);
     zArrow.position.set(0, 0, axisLength);
@@ -274,7 +274,7 @@ function createMobileControls() {
     const controlsContainer = document.createElement('div');
     controlsContainer.id = 'mobile-controls';
     controlsContainer.style.position = 'fixed';
-    controlsContainer.style.bottom = '10px';
+    controlsContainer.style.bottom = '20px';
     controlsContainer.style.left = '0';
     controlsContainer.style.width = '100%';
     controlsContainer.style.zIndex = '1000';
@@ -282,12 +282,12 @@ function createMobileControls() {
     controlsContainer.style.justifyContent = 'center';
     controlsContainer.style.alignItems = 'center';
     
-    // Create a 3x3 grid layout
+    // Create a 3x3 grid layout with larger buttons
     const buttonContainer = document.createElement('div');
     buttonContainer.style.display = 'grid';
-    buttonContainer.style.gridTemplateColumns = 'repeat(3, 50px)';
-    buttonContainer.style.gridTemplateRows = 'repeat(3, 50px)';
-    buttonContainer.style.gap = '2px';
+    buttonContainer.style.gridTemplateColumns = 'repeat(3, 60px)';
+    buttonContainer.style.gridTemplateRows = 'repeat(3, 60px)';
+    buttonContainer.style.gap = '4px';
     
     // Create the buttons WITHOUT text
     const leftButton = createDirectionButton('←', COLORS.xAxis, () => queueDirectionChange({ x: -1, y: 0, z: 0 }));
@@ -347,26 +347,27 @@ function createDirectionButton(arrowSymbol, color, clickHandler) {
         return `rgb(${r}, ${g}, ${b})`;
     };
     
-    // Style the button - SMALL and SIMPLE
+    // Style the button - LARGER and MORE VISIBLE
     button.style.width = '100%';
     button.style.height = '100%';
-    button.style.fontSize = '24px';
-    button.style.borderRadius = '8px';
+    button.style.fontSize = '30px';
+    button.style.borderRadius = '10px';
     button.style.background = hexToRgb(color);
     button.style.color = 'white';
     button.style.border = 'none';
-    button.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+    button.style.boxShadow = '0 4px 8px rgba(0,0,0,0.5)';
     button.style.outline = 'none';
     button.style.cursor = 'pointer';
     button.style.display = 'flex';
     button.style.justifyContent = 'center';
     button.style.alignItems = 'center';
     button.style.padding = '0';
+    button.style.fontWeight = 'bold';
     
     // Add active feedback
     button.addEventListener('touchstart', (e) => {
         button.style.transform = 'scale(0.95)';
-        button.style.boxShadow = '0 1px 2px rgba(0,0,0,0.3)';
+        button.style.boxShadow = '0 2px 4px rgba(0,0,0,0.5)';
         e.preventDefault(); // Prevent default to avoid double-tap zooming
         
         // Call the handler immediately for responsiveness
@@ -375,7 +376,7 @@ function createDirectionButton(arrowSymbol, color, clickHandler) {
     
     button.addEventListener('touchend', (e) => {
         button.style.transform = 'scale(1)';
-        button.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+        button.style.boxShadow = '0 4px 8px rgba(0,0,0,0.5)';
         e.preventDefault(); // Prevent default behavior
     });
     
@@ -468,34 +469,38 @@ function handleTouchStart(event) {
     // Prevent default to avoid scrolling
     event.preventDefault();
     
-    // Check if this is a pinch gesture (two touches) for mobile
-    if (IS_MOBILE && event.touches.length === 2) {
-        // Calculate the initial distance between two fingers
-        const touch1 = event.touches[0];
-        const touch2 = event.touches[1];
-        pinchStartDistance = Math.hypot(
-            touch2.clientX - touch1.clientX,
-            touch2.clientY - touch1.clientY
-        );
+    // For mobile, handle different touch events
+    if (IS_MOBILE) {
+        // Handle pinch gesture (two touches)
+        if (event.touches.length === 2) {
+            // Calculate the initial distance between two fingers
+            const touch1 = event.touches[0];
+            const touch2 = event.touches[1];
+            pinchStartDistance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+            isSingleTouch = false;
+        } 
+        // Handle single touch (for rotation)
+        else if (event.touches.length === 1) {
+            const touch = event.touches[0];
+            lastTouchX = touch.clientX;
+            isSingleTouch = true;
+        }
         return;
     }
     
-    // For single touch (direction control or rotation on mobile)
+    // For desktop touch (non-mobile) - handle as before for swipes
     const touch = event.touches[0];
     const touchX = touch.clientX;
     const touchY = touch.clientY;
     const touchTime = Date.now();
     
-    // Store touch start data
+    // Store touch start data for desktop
     this.touchStartX = touchX;
     this.touchStartY = touchY;
     this.touchStartTime = touchTime;
-    
-    // For rotation on mobile with single touch
-    if (IS_MOBILE) {
-        lastTouchX = touchX;
-        isSingleTouch = true;
-    }
 }
 
 // Handle touch move
@@ -503,59 +508,63 @@ function handleTouchMove(event) {
     // Prevent default to avoid scrolling
     event.preventDefault();
     
-    // Handle pinch-to-zoom (two touches) for mobile
-    if (IS_MOBILE && event.touches.length === 2) {
-        // Reset single touch tracking
-        isSingleTouch = false;
-        
-        // Calculate the current distance between two fingers
-        const touch1 = event.touches[0];
-        const touch2 = event.touches[1];
-        const currentDistance = Math.hypot(
-            touch2.clientX - touch1.clientX,
-            touch2.clientY - touch1.clientY
-        );
-        
-        // Skip if we don't have a valid starting distance
-        if (pinchStartDistance < 10) return;
-        
-        // Calculate the scale factor
-        const scaleFactor = currentDistance / pinchStartDistance;
-        
-        // Update the current scale, keeping it within bounds
-        const newScale = Math.max(MIN_SCALE, Math.min(currentScale * scaleFactor, MAX_SCALE));
-        
-        // Only apply if scale has changed significantly
-        if (Math.abs(newScale - currentScale) > 0.02) {
-            // Apply the scale to the game group
-            gameGroup.scale.set(newScale, newScale, newScale);
-            currentScale = newScale;
+    // For mobile devices
+    if (IS_MOBILE) {
+        // Handle pinch-to-zoom (two touches)
+        if (event.touches.length === 2) {
+            // Reset single touch tracking
+            isSingleTouch = false;
             
-            // Reset the start distance for continuous scaling
-            pinchStartDistance = currentDistance;
+            // Calculate the current distance between two fingers
+            const touch1 = event.touches[0];
+            const touch2 = event.touches[1];
+            const currentDistance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+            
+            // Skip if we don't have a valid starting distance
+            if (pinchStartDistance < 10) return;
+            
+            // Calculate the scale factor
+            const scaleFactor = currentDistance / pinchStartDistance;
+            
+            // Update the current scale, keeping it within bounds
+            const newScale = Math.max(MIN_SCALE, Math.min(currentScale * scaleFactor, MAX_SCALE));
+            
+            // Only apply if scale has changed significantly
+            if (Math.abs(newScale - currentScale) > 0.02) {
+                // Apply the scale to the game group
+                gameGroup.scale.set(newScale, newScale, newScale);
+                currentScale = newScale;
+                
+                // Reset the start distance for continuous scaling
+                pinchStartDistance = currentDistance;
+            }
+        }
+        // Handle horizontal rotation with one finger
+        else if (isSingleTouch && event.touches.length === 1) {
+            const touch = event.touches[0];
+            const touchX = touch.clientX;
+            
+            // Calculate the change in X position
+            const deltaX = touchX - lastTouchX;
+            
+            // Update rotation - only around Y axis (horizontal rotation)
+            if (Math.abs(deltaX) > 1) {
+                // Convert pixel movement to rotation (adjust sensitivity)
+                const rotationDelta = deltaX * 0.01;
+                currentRotationY += rotationDelta;
+                
+                // Apply rotation to game group - ONLY Y axis
+                gameGroup.rotation.y = currentRotationY;
+                
+                // Update last position
+                lastTouchX = touchX;
+            }
         }
     }
-    // Handle horizontal rotation for mobile with one finger
-    else if (IS_MOBILE && isSingleTouch && event.touches.length === 1) {
-        const touch = event.touches[0];
-        const touchX = touch.clientX;
-        
-        // Calculate the change in X position
-        const deltaX = touchX - lastTouchX;
-        
-        // Update rotation - only around Y axis (horizontal rotation)
-        if (Math.abs(deltaX) > 1) {
-            // Convert pixel movement to rotation (adjust sensitivity)
-            const rotationDelta = deltaX * 0.01;
-            currentRotationY += rotationDelta;
-            
-            // Apply rotation to game group - ONLY Y axis
-            gameGroup.rotation.y = currentRotationY;
-            
-            // Update last position
-            lastTouchX = touchX;
-        }
-    }
+    // Non-mobile devices don't need special handling here
 }
 
 // Handle touch end
@@ -565,17 +574,14 @@ function handleTouchEnd(event) {
     // Prevent default action
     event.preventDefault();
     
-    // Reset touch tracking
+    // Reset mobile touch tracking flags
     if (IS_MOBILE) {
         isSingleTouch = false;
-    }
-    
-    // Skip if we were doing a pinch-to-zoom
-    if (IS_MOBILE && pinchStartDistance > 0) {
         pinchStartDistance = 0;
-        return;
+        return; // No swipe gestures on mobile - exit early
     }
     
+    // Desktop touch processing for swipes - only for non-mobile
     // If no start touch registered, exit
     if (!this.touchStartX || !this.touchStartY) return;
     
@@ -595,7 +601,6 @@ function handleTouchEnd(event) {
     const maxSwipeTime = 600; // Longer time window for swipe detection
     
     // If this was a very short touch, treat it as a swipe for direction
-    // Otherwise it was probably a rotation gesture
     if (deltaTime < maxSwipeTime && 
         (Math.abs(deltaX) > minSwipeDistance || Math.abs(deltaY) > minSwipeDistance)) {
         
