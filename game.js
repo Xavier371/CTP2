@@ -40,6 +40,8 @@ let rotationStartAngle = 0;
 let currentRotationY = Math.PI * 0.005; // Initial rotation
 let isSingleTouch = false;
 let lastTouchX = 0;
+// Two finger tracking for simultaneous rotation and scaling
+let lastCenterX = 0;
 
 // DOM elements
 const scoreBoard = document.getElementById('scoreBoard');
@@ -52,6 +54,22 @@ function init() {
     // Create scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x111111); // subtle dark background
+    
+    // Load saved rotation and scale from localStorage for mobile
+    if (IS_MOBILE) {
+        try {
+            const savedSettings = localStorage.getItem('snake3dSettings');
+            if (savedSettings) {
+                const settings = JSON.parse(savedSettings);
+                currentRotationY = settings.rotation || Math.PI * 0.005;
+                currentScale = settings.scale || 1.0;
+            }
+        } catch (e) {
+            // If error loading settings, use defaults
+            currentRotationY = Math.PI * 0.005;
+            currentScale = 1.0;
+        }
+    }
     
     // Prevent scrolling on mobile
     if (IS_MOBILE) {
@@ -93,8 +111,10 @@ function init() {
     if (IS_MOBILE) {
         // Move camera back further on mobile to show entire grid
         camera.position.set(totalSize * 1.0, totalSize * 1.0, totalSize * 2.0);
-        // Apply the exact same rotation as desktop for consistent orientation
-        gameGroup.rotation.y = Math.PI * 0.005;
+        // Apply the saved rotation
+        gameGroup.rotation.y = currentRotationY;
+        // Apply the saved scale
+        gameGroup.scale.set(currentScale, currentScale, currentScale);
     } else {
         // Desktop camera position
         camera.position.set(totalSize * 1.0, totalSize * 1.0, totalSize * 2.0);
@@ -471,15 +491,20 @@ function handleTouchStart(event) {
     
     // For mobile, handle different touch events
     if (IS_MOBILE) {
-        // Handle pinch gesture (two touches)
+        // Handle two-finger touch (for pinch-zoom AND rotation)
         if (event.touches.length === 2) {
-            // Calculate the initial distance between two fingers
             const touch1 = event.touches[0];
             const touch2 = event.touches[1];
+            
+            // Calculate initial distance for scaling
             pinchStartDistance = Math.hypot(
                 touch2.clientX - touch1.clientX,
                 touch2.clientY - touch1.clientY
             );
+            
+            // Calculate center point between fingers for rotation
+            lastCenterX = (touch1.clientX + touch2.clientX) / 2;
+            
             isSingleTouch = false;
         } 
         // Handle single touch (for rotation)
@@ -510,36 +535,61 @@ function handleTouchMove(event) {
     
     // For mobile devices
     if (IS_MOBILE) {
-        // Handle pinch-to-zoom (two touches)
+        // Handle two-finger touch (for simultaneous pinch-zoom AND rotation)
         if (event.touches.length === 2) {
-            // Reset single touch tracking
-            isSingleTouch = false;
-            
-            // Calculate the current distance between two fingers
             const touch1 = event.touches[0];
             const touch2 = event.touches[1];
+            
+            // --- HANDLE SCALING ---
+            // Calculate the current distance between two fingers
             const currentDistance = Math.hypot(
                 touch2.clientX - touch1.clientX,
                 touch2.clientY - touch1.clientY
             );
             
             // Skip if we don't have a valid starting distance
-            if (pinchStartDistance < 10) return;
-            
-            // Calculate the scale factor
-            const scaleFactor = currentDistance / pinchStartDistance;
-            
-            // Update the current scale, keeping it within bounds
-            const newScale = Math.max(MIN_SCALE, Math.min(currentScale * scaleFactor, MAX_SCALE));
-            
-            // Only apply if scale has changed significantly
-            if (Math.abs(newScale - currentScale) > 0.02) {
-                // Apply the scale to the game group
-                gameGroup.scale.set(newScale, newScale, newScale);
-                currentScale = newScale;
+            if (pinchStartDistance > 10) {
+                // Calculate the scale factor
+                const scaleFactor = currentDistance / pinchStartDistance;
                 
-                // Reset the start distance for continuous scaling
-                pinchStartDistance = currentDistance;
+                // Update the current scale, keeping it within bounds
+                const newScale = Math.max(MIN_SCALE, Math.min(currentScale * scaleFactor, MAX_SCALE));
+                
+                // Only apply if scale has changed significantly
+                if (Math.abs(newScale - currentScale) > 0.02) {
+                    // Apply the scale to the game group
+                    gameGroup.scale.set(newScale, newScale, newScale);
+                    currentScale = newScale;
+                    
+                    // Reset the start distance for continuous scaling
+                    pinchStartDistance = currentDistance;
+                    
+                    // Save settings to localStorage
+                    saveSettings();
+                }
+            }
+            
+            // --- HANDLE ROTATION (simultaneously) ---
+            // Calculate center point between fingers
+            const currentCenterX = (touch1.clientX + touch2.clientX) / 2;
+            
+            // Calculate the change in center X position
+            const deltaCenterX = currentCenterX - lastCenterX;
+            
+            // Update rotation - only around Y axis (horizontal rotation)
+            if (Math.abs(deltaCenterX) > 1) {
+                // Convert pixel movement to rotation (adjust sensitivity)
+                const rotationDelta = deltaCenterX * 0.01;
+                currentRotationY += rotationDelta;
+                
+                // Apply rotation to game group - ONLY Y axis
+                gameGroup.rotation.y = currentRotationY;
+                
+                // Update last center position
+                lastCenterX = currentCenterX;
+                
+                // Save settings to localStorage
+                saveSettings();
             }
         }
         // Handle horizontal rotation with one finger
@@ -561,6 +611,9 @@ function handleTouchMove(event) {
                 
                 // Update last position
                 lastTouchX = touchX;
+                
+                // Save settings to localStorage
+                saveSettings();
             }
         }
     }
@@ -872,13 +925,7 @@ function restartGame() {
     score = 0;
     isGameOver = false;
     
-    // Reset zoom scale and rotation
-    if (IS_MOBILE) {
-        currentScale = 1.0;
-        currentRotationY = Math.PI * 0.005; // Reset to initial rotation
-        gameGroup.scale.set(1.0, 1.0, 1.0);
-        gameGroup.rotation.y = currentRotationY;
-    }
+    // DO NOT reset zoom scale and rotation on mobile - preserve user preferences
     
     // Set initial direction to move right
     direction = { x: 1, y: 0, z: 0 };
@@ -918,6 +965,21 @@ function handleResize() {
 function animate() {
     requestAnimationFrame(animate);
     renderer.render(scene, camera);
+}
+
+// Save current settings to localStorage
+function saveSettings() {
+    if (IS_MOBILE) {
+        try {
+            const settings = {
+                rotation: currentRotationY,
+                scale: currentScale
+            };
+            localStorage.setItem('snake3dSettings', JSON.stringify(settings));
+        } catch (e) {
+            // Silently fail if localStorage is not available
+        }
+    }
 }
 
 // Start the game when the page loads
