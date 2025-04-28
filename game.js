@@ -87,10 +87,9 @@ function init() {
     // Adjust camera position based on device
     if (IS_MOBILE) {
         // Move camera back further on mobile to show entire grid
-        camera.position.set(totalSize * 0.9, totalSize * 0.9, totalSize * 2.2);
-        // Apply a small rotation to the game group for better visibility
-        gameGroup.rotation.x = Math.PI * 0.05;
-        gameGroup.rotation.y = Math.PI * 0.1;
+        camera.position.set(totalSize * 1.0, totalSize * 1.0, totalSize * 2.0);
+        // Apply the exact same rotation as desktop for consistent orientation
+        gameGroup.rotation.y = Math.PI * 0.005;
     } else {
         // Desktop camera position
         camera.position.set(totalSize * 1.0, totalSize * 1.0, totalSize * 2.0);
@@ -220,8 +219,8 @@ function addAxesAtCorner() {
     const xAxis = new THREE.Line(xAxisGeo, xAxisMat);
     gameGroup.add(xAxis);
     
-    // Add red arrow for X-axis
-    const xArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.5 : 0.3, IS_MOBILE ? 1.0 : 0.6, 12);
+    // Add red arrow for X-axis - SMALLER SIZE
+    const xArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.3 : 0.2, IS_MOBILE ? 0.6 : 0.4, 12);
     const xArrowMat = new THREE.MeshBasicMaterial({ color: COLORS.xAxis });
     const xArrow = new THREE.Mesh(xArrowGeo, xArrowMat);
     xArrow.position.set(axisLength, 0, 0);
@@ -238,8 +237,8 @@ function addAxesAtCorner() {
     const yAxis = new THREE.Line(yAxisGeo, yAxisMat);
     gameGroup.add(yAxis);
     
-    // Add green arrow for Y-axis
-    const yArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.5 : 0.3, IS_MOBILE ? 1.0 : 0.6, 12);
+    // Add green arrow for Y-axis - SMALLER SIZE
+    const yArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.3 : 0.2, IS_MOBILE ? 0.6 : 0.4, 12);
     const yArrowMat = new THREE.MeshBasicMaterial({ color: COLORS.yAxis });
     const yArrow = new THREE.Mesh(yArrowGeo, yArrowMat);
     yArrow.position.set(0, axisLength, 0);
@@ -255,8 +254,8 @@ function addAxesAtCorner() {
     const zAxis = new THREE.Line(zAxisGeo, zAxisMat);
     gameGroup.add(zAxis);
     
-    // Add blue arrow for Z-axis
-    const zArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.5 : 0.3, IS_MOBILE ? 1.0 : 0.6, 12);
+    // Add blue arrow for Z-axis - SMALLER SIZE
+    const zArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.3 : 0.2, IS_MOBILE ? 0.6 : 0.4, 12);
     const zArrowMat = new THREE.MeshBasicMaterial({ color: COLORS.zAxis });
     const zArrow = new THREE.Mesh(zArrowGeo, zArrowMat);
     zArrow.position.set(0, 0, axisLength);
