@@ -1,7 +1,7 @@
 // Game constants
 const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 const GRID_SIZE = 8; // Keep 8x8x8 grid
-const UNIT_SIZE = IS_MOBILE ? 3 : .35; // 10% smaller for mobile (down from 8.0)
+const UNIT_SIZE = IS_MOBILE ? 5.5 : 0.95; // Reduced size for smaller grid cube
 const GRID_UNITS = GRID_SIZE / UNIT_SIZE;
 const MOVE_INTERVAL = 400; // Slowed down from 300ms to 400ms for slower snake movement
 const QUICK_RESPONSE_DELAY = 150; // delay for immediate moves (slower than instant but faster than interval)
@@ -30,6 +30,11 @@ let lastMoveTime = 0; // Track the last time the snake moved
 let touchStartX, touchStartY, touchStartTime;
 let lastSwipeTime = 0; // Track last swipe time to prevent too rapid swipes
 const MIN_SWIPE_INTERVAL = 100; // Minimum time between swipes (ms)
+// Mobile pinch-to-zoom variables
+let pinchStartDistance = 0;
+let currentScale = 1.0;
+const MIN_SCALE = 0.7;
+const MAX_SCALE = 1.5;
 
 // DOM elements
 const scoreBoard = document.getElementById('scoreBoard');
@@ -71,21 +76,31 @@ function init() {
     // Calculate total size
     const totalSize = GRID_SIZE * UNIT_SIZE;
     
-    // Create camera - IDENTICAL to desktop for both mobile and desktop
+    // Create camera with adjusted position for mobile
     camera = new THREE.PerspectiveCamera(
-        50, // SAME field of view for both platforms
+        IS_MOBILE ? 60 : 50, // Wider field of view on mobile
         window.innerWidth / window.innerHeight,
         0.1,
         1000
     );
     
-    // EXACT SAME camera position for both platforms, just scaled
-    camera.position.set(totalSize * 1.0, totalSize * 1.0, totalSize * 2.0);
+    // Adjust camera position based on device
+    if (IS_MOBILE) {
+        // Move camera back further on mobile to show entire grid
+        camera.position.set(totalSize * 0.9, totalSize * 0.9, totalSize * 2.2);
+        // Apply a small rotation to the game group for better visibility
+        gameGroup.rotation.x = Math.PI * 0.05;
+        gameGroup.rotation.y = Math.PI * 0.1;
+    } else {
+        // Desktop camera position
+        camera.position.set(totalSize * 1.0, totalSize * 1.0, totalSize * 2.0);
+        // Apply exact same slight rotation
+        gameGroup.rotation.y = Math.PI * 0.005;
+    }
+    
+    // Look at center of grid
     camera.lookAt(totalSize * 0.5, totalSize * 0.5, totalSize * 0.5);
     
-    // Apply exact same slight rotation
-    gameGroup.rotation.y = Math.PI * 0.005;
-
     // Create renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -108,6 +123,11 @@ function init() {
     // Add mobile controls or desktop touch listeners
     if (IS_MOBILE) {
         createMobileControls();
+        
+        // Add pinch-to-zoom event listeners for mobile
+        renderer.domElement.addEventListener('touchstart', handleTouchStart, false);
+        renderer.domElement.addEventListener('touchmove', handleTouchMove, false);
+        renderer.domElement.addEventListener('touchend', handleTouchEnd, false);
     } else {
         // Only add touch event listeners for non-mobile devices
         renderer.domElement.addEventListener('touchstart', handleTouchStart, false);
@@ -437,10 +457,26 @@ function createFood() {
     gameGroup.add(foodMesh);
 }
 
-// Handle touch start (for non-mobile devices)
+// Handle touch start
 function handleTouchStart(event) {
     if (isGameOver) return;
     
+    // Prevent default to avoid scrolling
+    event.preventDefault();
+    
+    // Check if this is a pinch gesture (two touches) for mobile
+    if (IS_MOBILE && event.touches.length === 2) {
+        // Calculate the initial distance between two fingers
+        const touch1 = event.touches[0];
+        const touch2 = event.touches[1];
+        pinchStartDistance = Math.hypot(
+            touch2.clientX - touch1.clientX,
+            touch2.clientY - touch1.clientY
+        );
+        return;
+    }
+    
+    // For single touch (direction control)
     const touch = event.touches[0];
     const touchX = touch.clientX;
     const touchY = touch.clientY;
@@ -450,23 +486,56 @@ function handleTouchStart(event) {
     this.touchStartX = touchX;
     this.touchStartY = touchY;
     this.touchStartTime = touchTime;
-    
-    // Prevent default to avoid scrolling
-    event.preventDefault();
 }
 
-// Handle touch move (for non-mobile devices)
+// Handle touch move
 function handleTouchMove(event) {
     // Prevent default to avoid scrolling
     event.preventDefault();
+    
+    // Check if this is a pinch gesture (two touches) for mobile
+    if (IS_MOBILE && event.touches.length === 2) {
+        // Calculate the current distance between two fingers
+        const touch1 = event.touches[0];
+        const touch2 = event.touches[1];
+        const currentDistance = Math.hypot(
+            touch2.clientX - touch1.clientX,
+            touch2.clientY - touch1.clientY
+        );
+        
+        // Skip if we don't have a valid starting distance
+        if (pinchStartDistance < 10) return;
+        
+        // Calculate the scale factor
+        const scaleFactor = currentDistance / pinchStartDistance;
+        
+        // Update the current scale, keeping it within bounds
+        const newScale = Math.max(MIN_SCALE, Math.min(currentScale * scaleFactor, MAX_SCALE));
+        
+        // Only apply if scale has changed significantly
+        if (Math.abs(newScale - currentScale) > 0.02) {
+            // Apply the scale to the game group
+            gameGroup.scale.set(newScale, newScale, newScale);
+            currentScale = newScale;
+            
+            // Reset the start distance for continuous scaling
+            pinchStartDistance = currentDistance;
+        }
+    }
 }
 
-// Handle touch end (for non-mobile devices)
+// Handle touch end
 function handleTouchEnd(event) {
     if (isGameOver) return;
     
     // Prevent default action
     event.preventDefault();
+    
+    // Skip if we were doing a pinch-to-zoom
+    if (IS_MOBILE && pinchStartDistance > 0) {
+        pinchStartDistance = 0;
+        return;
+    }
     
     // If no start touch registered, exit
     if (!this.touchStartX || !this.touchStartY) return;
@@ -766,6 +835,12 @@ function restartGame() {
     // Reset game state
     score = 0;
     isGameOver = false;
+    
+    // Reset zoom scale
+    if (IS_MOBILE) {
+        currentScale = 1.0;
+        gameGroup.scale.set(1.0, 1.0, 1.0);
+    }
     
     // Set initial direction to move right
     direction = { x: 1, y: 0, z: 0 };
