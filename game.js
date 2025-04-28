@@ -35,6 +35,11 @@ let pinchStartDistance = 0;
 let currentScale = 1.0;
 const MIN_SCALE = 0.7;
 const MAX_SCALE = 1.5;
+// Mobile rotation variables
+let rotationStartAngle = 0;
+let currentRotationY = Math.PI * 0.005; // Initial rotation
+let isSingleTouch = false;
+let lastTouchX = 0;
 
 // DOM elements
 const scoreBoard = document.getElementById('scoreBoard');
@@ -207,7 +212,7 @@ function createGrid() {
 function addAxesAtCorner() {
     const totalSize = GRID_SIZE * UNIT_SIZE;
     const axisLength = totalSize;
-    const axisWidth = 3;
+    const axisWidth = IS_MOBILE ? 5 : 3; // Thicker lines for mobile
     
     // Create the X-axis (red, left/right)
     const xAxisGeo = new THREE.BufferGeometry();
@@ -219,8 +224,8 @@ function addAxesAtCorner() {
     const xAxis = new THREE.Line(xAxisGeo, xAxisMat);
     gameGroup.add(xAxis);
     
-    // Add red arrow for X-axis - SMALLER SIZE
-    const xArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.3 : 0.2, IS_MOBILE ? 0.6 : 0.4, 12);
+    // Add red arrow for X-axis - LARGER on mobile
+    const xArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.45 : 0.2, IS_MOBILE ? 0.9 : 0.4, 12);
     const xArrowMat = new THREE.MeshBasicMaterial({ color: COLORS.xAxis });
     const xArrow = new THREE.Mesh(xArrowGeo, xArrowMat);
     xArrow.position.set(axisLength, 0, 0);
@@ -237,8 +242,8 @@ function addAxesAtCorner() {
     const yAxis = new THREE.Line(yAxisGeo, yAxisMat);
     gameGroup.add(yAxis);
     
-    // Add green arrow for Y-axis - SMALLER SIZE
-    const yArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.3 : 0.2, IS_MOBILE ? 0.6 : 0.4, 12);
+    // Add green arrow for Y-axis - LARGER on mobile
+    const yArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.45 : 0.2, IS_MOBILE ? 0.9 : 0.4, 12);
     const yArrowMat = new THREE.MeshBasicMaterial({ color: COLORS.yAxis });
     const yArrow = new THREE.Mesh(yArrowGeo, yArrowMat);
     yArrow.position.set(0, axisLength, 0);
@@ -254,8 +259,8 @@ function addAxesAtCorner() {
     const zAxis = new THREE.Line(zAxisGeo, zAxisMat);
     gameGroup.add(zAxis);
     
-    // Add blue arrow for Z-axis - SMALLER SIZE
-    const zArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.3 : 0.2, IS_MOBILE ? 0.6 : 0.4, 12);
+    // Add blue arrow for Z-axis - LARGER on mobile
+    const zArrowGeo = new THREE.ConeGeometry(IS_MOBILE ? 0.45 : 0.2, IS_MOBILE ? 0.9 : 0.4, 12);
     const zArrowMat = new THREE.MeshBasicMaterial({ color: COLORS.zAxis });
     const zArrow = new THREE.Mesh(zArrowGeo, zArrowMat);
     zArrow.position.set(0, 0, axisLength);
@@ -475,7 +480,7 @@ function handleTouchStart(event) {
         return;
     }
     
-    // For single touch (direction control)
+    // For single touch (direction control or rotation on mobile)
     const touch = event.touches[0];
     const touchX = touch.clientX;
     const touchY = touch.clientY;
@@ -485,6 +490,12 @@ function handleTouchStart(event) {
     this.touchStartX = touchX;
     this.touchStartY = touchY;
     this.touchStartTime = touchTime;
+    
+    // For rotation on mobile with single touch
+    if (IS_MOBILE) {
+        lastTouchX = touchX;
+        isSingleTouch = true;
+    }
 }
 
 // Handle touch move
@@ -492,8 +503,11 @@ function handleTouchMove(event) {
     // Prevent default to avoid scrolling
     event.preventDefault();
     
-    // Check if this is a pinch gesture (two touches) for mobile
+    // Handle pinch-to-zoom (two touches) for mobile
     if (IS_MOBILE && event.touches.length === 2) {
+        // Reset single touch tracking
+        isSingleTouch = false;
+        
         // Calculate the current distance between two fingers
         const touch1 = event.touches[0];
         const touch2 = event.touches[1];
@@ -521,6 +535,27 @@ function handleTouchMove(event) {
             pinchStartDistance = currentDistance;
         }
     }
+    // Handle horizontal rotation for mobile with one finger
+    else if (IS_MOBILE && isSingleTouch && event.touches.length === 1) {
+        const touch = event.touches[0];
+        const touchX = touch.clientX;
+        
+        // Calculate the change in X position
+        const deltaX = touchX - lastTouchX;
+        
+        // Update rotation - only around Y axis (horizontal rotation)
+        if (Math.abs(deltaX) > 1) {
+            // Convert pixel movement to rotation (adjust sensitivity)
+            const rotationDelta = deltaX * 0.01;
+            currentRotationY += rotationDelta;
+            
+            // Apply rotation to game group - ONLY Y axis
+            gameGroup.rotation.y = currentRotationY;
+            
+            // Update last position
+            lastTouchX = touchX;
+        }
+    }
 }
 
 // Handle touch end
@@ -529,6 +564,11 @@ function handleTouchEnd(event) {
     
     // Prevent default action
     event.preventDefault();
+    
+    // Reset touch tracking
+    if (IS_MOBILE) {
+        isSingleTouch = false;
+    }
     
     // Skip if we were doing a pinch-to-zoom
     if (IS_MOBILE && pinchStartDistance > 0) {
@@ -550,45 +590,45 @@ function handleTouchEnd(event) {
     const deltaY = touchEndY - this.touchStartY;
     const deltaTime = touchEndTime - this.touchStartTime;
     
-    // Minimum swipe distance and maximum time for a swipe
+    // Only handle as swipe if it was quick and long enough
     const minSwipeDistance = 20; // Lower threshold to make swipes more responsive
     const maxSwipeTime = 600; // Longer time window for swipe detection
     
-    // If swipe was too slow or too short, ignore it
-    if (deltaTime > maxSwipeTime || 
-        (Math.abs(deltaX) < minSwipeDistance && Math.abs(deltaY) < minSwipeDistance)) {
-        return;
-    }
-    
-    // Determine primary swipe direction
-    if (Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
-        // Clear horizontal swipe (X-axis/red)
-        if (deltaX > 0) {
-            // Right swipe - positive X
-            queueDirectionChange({ x: 1, y: 0, z: 0 });
-        } else {
-            // Left swipe - negative X
-            queueDirectionChange({ x: -1, y: 0, z: 0 });
+    // If this was a very short touch, treat it as a swipe for direction
+    // Otherwise it was probably a rotation gesture
+    if (deltaTime < maxSwipeTime && 
+        (Math.abs(deltaX) > minSwipeDistance || Math.abs(deltaY) > minSwipeDistance)) {
+        
+        // Determine primary swipe direction
+        if (Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+            // Clear horizontal swipe (X-axis/red)
+            if (deltaX > 0) {
+                // Right swipe - positive X
+                queueDirectionChange({ x: 1, y: 0, z: 0 });
+            } else {
+                // Left swipe - negative X
+                queueDirectionChange({ x: -1, y: 0, z: 0 });
+            }
+        } 
+        else if (Math.abs(deltaY) > Math.abs(deltaX) * 1.5) {
+            // Clear vertical swipe - Y-axis/green
+            if (deltaY < 0) {
+                // Up swipe - positive Y
+                queueDirectionChange({ x: 0, y: 1, z: 0 });
+            } else {
+                // Down swipe - negative Y
+                queueDirectionChange({ x: 0, y: -1, z: 0 });
+            }
         }
-    } 
-    else if (Math.abs(deltaY) > Math.abs(deltaX) * 1.5) {
-        // Clear vertical swipe - Y-axis/green
-        if (deltaY < 0) {
-            // Up swipe - positive Y
-            queueDirectionChange({ x: 0, y: 1, z: 0 });
-        } else {
-            // Down swipe - negative Y
-            queueDirectionChange({ x: 0, y: -1, z: 0 });
-        }
-    }
-    else {
-        // Diagonal swipe - Z-axis/blue (45 degree swipe)
-        if (deltaY < 0 && deltaX > 0 || deltaY > 0 && deltaX < 0) {
-            // Up-right or down-left = into screen (negative Z)
-            queueDirectionChange({ x: 0, y: 0, z: -1 });
-        } else {
-            // Up-left or down-right = out of screen (positive Z)
-            queueDirectionChange({ x: 0, y: 0, z: 1 });
+        else {
+            // Diagonal swipe - Z-axis/blue (45 degree swipe)
+            if (deltaY < 0 && deltaX > 0 || deltaY > 0 && deltaX < 0) {
+                // Up-right or down-left = into screen (negative Z)
+                queueDirectionChange({ x: 0, y: 0, z: -1 });
+            } else {
+                // Up-left or down-right = out of screen (positive Z)
+                queueDirectionChange({ x: 0, y: 0, z: 1 });
+            }
         }
     }
 }
@@ -764,26 +804,18 @@ function moveSnake() {
         return;
     }
     
-    // Check if eating food - use a more tolerant check for mobile
+    // Check if eating food - use a more tolerant check for all platforms
     let isEating = false;
     
-    if (IS_MOBILE) {
-        // Use distance-based check for mobile to be more forgiving
-        const distanceToFood = Math.sqrt(
-            Math.pow(food.position.x - newHeadPosition.x, 2) +
-            Math.pow(food.position.y - newHeadPosition.y, 2) +
-            Math.pow(food.position.z - newHeadPosition.z, 2)
-        );
-        
-        isEating = distanceToFood < UNIT_SIZE * 0.8;
-    } else {
-        // Desktop uses exact collision
-        isEating = (
-            newHeadPosition.x === food.position.x &&
-            newHeadPosition.y === food.position.y &&
-            newHeadPosition.z === food.position.z
-        );
-    }
+    // Use distance-based check for more forgiving collision
+    const distanceToFood = Math.sqrt(
+        Math.pow(food.position.x - newHeadPosition.x, 2) +
+        Math.pow(food.position.y - newHeadPosition.y, 2) +
+        Math.pow(food.position.z - newHeadPosition.z, 2)
+    );
+    
+    // More forgiving collision for all platforms
+    isEating = distanceToFood < UNIT_SIZE * 0.8;
     
     // Create new head
     const snakeGeometry = new THREE.BoxGeometry(UNIT_SIZE * 0.9, UNIT_SIZE * 0.9, UNIT_SIZE * 0.9);
@@ -835,10 +867,12 @@ function restartGame() {
     score = 0;
     isGameOver = false;
     
-    // Reset zoom scale
+    // Reset zoom scale and rotation
     if (IS_MOBILE) {
         currentScale = 1.0;
+        currentRotationY = Math.PI * 0.005; // Reset to initial rotation
         gameGroup.scale.set(1.0, 1.0, 1.0);
+        gameGroup.rotation.y = currentRotationY;
     }
     
     // Set initial direction to move right
