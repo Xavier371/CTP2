@@ -78,7 +78,7 @@ canvas {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 0;                 /* no bottom margin */
+  margin: 0;
   gap: 6px;                  /* very close together */
 }
 .game-button {
@@ -126,7 +126,7 @@ canvas {
 .left-btn  { grid-column: 1; grid-row: 2; }
 .right-btn { grid-column: 3; grid-row: 2; }
 
-/* Triangles (large for touch) */
+/* Triangles */
 .up-btn {
   border-left: 18px solid transparent;
   border-right: 18px solid transparent;
@@ -208,7 +208,7 @@ canvas {
     width: 25%;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;     /* keep buttons at very top */
+    justify-content: flex-start;
     align-items: center;
     height: 90%;
     padding: 0 10px;
@@ -220,8 +220,8 @@ canvas {
     flex-direction: column;
     align-items: center;
     margin-top: 0;
-    margin-bottom: 0;                /* no gap below */
-    gap: 6px;                        /* buttons closer together */
+    margin-bottom: 0;
+    gap: 6px;
   }
   .game-button {
     padding: 10px;
@@ -243,7 +243,7 @@ canvas {
     place-items: center;
     gap: 12px;
     margin: 0 auto;
-    transform: translateY(-4px);
+    transform: translateY(12px);   /* ▼ moved D-pad down */
   }
   canvas {
     max-height: 90svh;
