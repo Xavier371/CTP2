@@ -7,7 +7,7 @@ body {
   background-color: #f0f0f0;
   font-family: Arial, sans-serif;
   touch-action: manipulation;
-  min-height: 100svh;                /* robust vs iOS address bar */
+  min-height: 100svh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -63,8 +63,8 @@ canvas {
   border-radius: 8px;
   margin: 10px 0;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  max-width: 100%;         /* never overflow width */
-  height: auto;            /* keep aspect ratio */
+  max-width: 100%;
+  height: auto;
 }
 
 /* ===================== TOP CONTROLS ===================== */
@@ -72,8 +72,8 @@ canvas {
   display: flex;
   justify-content: center;
   gap: 15px;
-  margin: 20px 0;
-  flex-wrap: wrap;         /* prevent clipping on narrow widths */
+  margin: 10px 0;              /* moved up (was 20px) */
+  flex-wrap: wrap;
 }
 .game-button {
   background-color: #1a365d;
@@ -95,16 +95,13 @@ canvas {
 }
 
 /* ===================== MOBILE D-PAD (TRIANGLES) ===================== */
-/* Hidden by default; shown in mobile landscape */
 .mobile-controls {
   display: none;
   margin: 0;
   z-index: 10;
 }
-
-/* Triangle buttons: pure border triangles (no boxes). */
 .mobile-btn {
-  all: unset;                  /* strip UA styles so no square box appears */
+  all: unset;
   display: block;
   width: 0;
   height: 0;
@@ -112,48 +109,43 @@ canvas {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   line-height: 0;
-  background: none !important; /* prevent any background images */
+  background: none !important;
   box-shadow: none !important;
   border-radius: 0 !important;
 }
 .mobile-btn span { display: none; }
 
-/* Positions when grid is active (set in mobile landscape media query) */
 .up-btn    { grid-column: 2; grid-row: 1; }
 .down-btn  { grid-column: 2; grid-row: 3; }
 .left-btn  { grid-column: 1; grid-row: 2; }
 .right-btn { grid-column: 3; grid-row: 2; }
 
-/* Triangle sizes (compact + closer together) */
+/* Triangles (slightly bigger now) */
 .up-btn {
-  border-left: 12px solid transparent;
-  border-right: 12px solid transparent;
-  border-bottom: 18px solid #1a365d;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-bottom: 20px solid #1a365d;
   margin-bottom: -2px;
 }
 .down-btn {
-  border-left: 12px solid transparent;
-  border-right: 12px solid transparent;
-  border-top: 18px solid #1a365d;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 20px solid #1a365d;
   margin-top: -2px;
 }
 .left-btn {
-  border-top: 12px solid transparent;
-  border-bottom: 12px solid transparent;
-  border-right: 18px solid #1a365d;
+  border-top: 14px solid transparent;
+  border-bottom: 14px solid transparent;
+  border-right: 20px solid #1a365d;
   margin-right: -2px;
 }
 .right-btn {
-  border-top: 12px solid transparent;
-  border-bottom: 12px solid transparent;
-  border-left: 18px solid #1a365d;
+  border-top: 14px solid transparent;
+  border-bottom: 14px solid transparent;
+  border-left: 20px solid #1a365d;
   margin-left: -2px;
 }
-
-/* Extra nudge on press */
 .mobile-btn:active { transform: scale(0.96); }
-
-/* Legacy row wrapper (if present in your HTML) */
 .middle-row { display: flex; gap: 36px; justify-content: center; }
 
 /* ===================== ROTATION OVERLAY ===================== */
@@ -177,27 +169,22 @@ canvas {
 @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(90deg); } }
 
 /* ===================== MEDIA QUERIES ===================== */
-/* Portrait phones: show rotate overlay, hide game */
 @media (max-width: 768px) and (orientation: portrait) {
   .rotation-overlay { display: flex; }
   #gameContainer { display: none; }
 }
-
-/* Mobile / small-tablet landscape: three-column layout + show D-pad */
 @media (max-width: 1024px) and (orientation: landscape) {
   .rotation-overlay { display: none; }
-
   .container {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    height: 100svh;                /* safe viewport height */
+    height: 100svh;
     padding: 10px;
     gap: 10px;
     max-width: none;
     box-sizing: border-box;
   }
-
   .left-section {
     width: 25%;
     text-align: center;
@@ -210,9 +197,7 @@ canvas {
   .left-section h1 { font-size: 20px; font-weight: bold; margin: 0; margin-top: -30px; margin-bottom: 10px; }
   .left-section .game-title { font-size: 14px; margin: 5px 0; }
   .left-section #message    { font-size: 14px; margin: 5px 0; margin-top: 10px; }
-
   .center-section { width: 50%; display: flex; align-items: center; justify-content: center; }
-
   .right-section {
     width: 25%;
     display: flex;
@@ -222,17 +207,15 @@ canvas {
     height: 90%;
     padding: 0 10px;
     box-sizing: border-box;
-    overflow: visible;             /* D-pad cannot be clipped */
+    overflow: visible;
   }
-
   .controls {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 12%;
+    margin-bottom: 8%;         /* moved up (was 12–15%) */
     gap: 20px;
   }
-
   .game-button {
     padding: 10px;
     font-size: 12px;
@@ -246,18 +229,15 @@ canvas {
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   }
   .game-button:active { background-color: #2c5282; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
-
-  /* SHOW D-pad as a tight 3×3 grid and lift it slightly */
   .mobile-controls {
     display: grid !important;
     grid-template-columns: repeat(3, auto);
     grid-template-rows: repeat(3, auto);
     place-items: center;
-    gap: 12px;                     /* closer together */
+    gap: 12px;
     margin: 0 auto;
-    transform: translateY(-6px);   /* move slightly up */
+    transform: translateY(-6px);
   }
-
   canvas {
     max-height: 90svh;
     width: auto;
