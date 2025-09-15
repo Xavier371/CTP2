@@ -1,4 +1,4 @@
-/* Baseline mobile safety */
+/* --- Mobile-safe baseline (no visual change) --- */
 html { height: 100%; -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
@@ -7,162 +7,226 @@ body {
   background-color: #f0f0f0;
   font-family: Arial, sans-serif;
   touch-action: manipulation;
-  min-height: 100svh;
+  min-height: 100svh;            /* fixes iOS 100vh issue */
   display: flex;
   justify-content: center;
   align-items: center;
   overflow-x: hidden;
 }
 
-/* Layout (kept) */
-.container { display:flex; flex-direction:column; align-items:center; gap:15px; padding:20px; width:100%; max-width:900px; box-sizing:border-box; }
-.left-section { text-align:center; width:100%; }
-h1 { color:#333; margin:0; font-size:36px; font-weight:bold; letter-spacing:1px; }
-.game-title { font-size:24px; color:#333; margin:15px 0; font-weight:500; }
-#message { font-size:22px; color:#333; margin:15px 0; text-decoration:underline; min-height:30px; line-height:1.4; }
-#message.blue-wins{color:#1a365d;font-weight:bold;} #message.red-wins{color:#8B0000;font-weight:bold;}
-.center-section { width:100%; display:flex; justify-content:center; margin:10px 0; }
+/* ---------------- Your original layout/styles ---------------- */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  width: 100%;
+  max-width: 900px;
+  box-sizing: border-box;
+}
+
+.left-section { text-align: center; width: 100%; }
+h1 {
+  color: #333; margin: 0; font-size: 36px; font-weight: bold; letter-spacing: 1px;
+}
+.game-title { font-size: 24px; color: #333; margin: 15px 0; font-weight: 500; }
+#message {
+  font-size: 22px; color: #333; margin: 15px 0; font-weight: normal;
+  text-decoration: underline; min-height: 30px; line-height: 1.4;
+}
+#message.blue-wins { color: #1a365d; font-weight: bold; }
+#message.red-wins  { color: #8B0000; font-weight: bold; }
+
+.center-section { width: 100%; display: flex; justify-content: center; margin: 10px 0; }
 
 canvas {
-  background:#fff; border:3px solid #333; border-radius:8px; margin:10px 0;
-  box-shadow:0 4px 12px rgba(0,0,0,.15);
-  max-width:100%; height:auto;
+  background-color: white;
+  border: 3px solid #333;
+  border-radius: 8px;
+  margin: 10px 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-width: 100%;  /* prevents overflow on narrow screens */
+  height: auto;     /* keeps aspect ratio when scaled */
 }
 
-.controls { display:flex; justify-content:center; gap:15px; margin:20px 0; flex-wrap:wrap; }
-.game-button { background:#1a365d; color:#fff; padding:16px 32px; border:none; border-radius:8px; cursor:pointer; font-size:18px; font-weight:600; transition:.3s; box-shadow:0 4px 8px rgba(0,0,0,.2); letter-spacing:.5px; }
-.game-button:hover { background:#2c5282; transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.3); }
+.controls {
+  display: flex; justify-content: center; gap: 15px; margin: 20px 0; flex-wrap: wrap;
+}
+.game-button {
+  background-color: #1a365d; color: white; padding: 16px 32px; border: none; border-radius: 8px;
+  cursor: pointer; font-size: 18px; font-weight: 600; transition: all 0.3s;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2); letter-spacing: 0.5px;
+}
+.game-button:hover { background-color: #2c5282; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
 
-/* Rotation overlay */
-.rotation-overlay { display:none; position:fixed; inset:0; background:#000; z-index:9999; color:#fff; display:none; align-items:center; justify-content:center; flex-direction:column; padding:24px; box-sizing:border-box; }
-.rotation-overlay h1{font-size:24px;margin-bottom:20px;text-align:center;} .rotation-overlay p{font-size:18px;margin:0;text-align:center;}
-.phone-icon{font-size:48px;margin-bottom:20px;animation:rotate 2s linear infinite;}
-@keyframes rotate{from{transform:rotate(0)}to{transform:rotate(90deg)}}
-
-/* Hide game in phone portrait */
-@media (max-width:768px) and (orientation:portrait){
-  .rotation-overlay{display:flex;}
-  #gameContainer{display:none;}
+/* ---------------- D-pad (Triangles) ---------------- */
+.mobile-controls {
+  display: none; /* shown in mobile landscape */
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  z-index: 5;
 }
 
-/* Right column + D-pad in phone landscape (diagram layout) */
-@media (max-width:768px) and (orientation:landscape){
-  .rotation-overlay{display:none;}
-  .container{flex-direction:row; justify-content:space-between; align-items:center; height:100svh; padding:10px; gap:10px; max-width:none; box-sizing:border-box;}
-  .left-section{width:25%; display:flex; flex-direction:column; justify-content:center; gap:20px; padding:0 10px; text-align:center;}
-  .left-section h1{font-size:20px; margin:0 0 10px; font-weight:bold;}
-  .left-section .game-title{font-size:14px; margin:5px 0;}
-  .left-section #message{font-size:14px; margin:5px 0; margin-top:10px;}
-  .center-section{width:50%; display:flex; align-items:center; justify-content:center;}
-  .right-section{width:25%; display:flex; flex-direction:column; justify-content:space-between; align-items:center; height:90%; padding:0 10px; box-sizing:border-box;}
-  .controls{flex-direction:column; align-items:center; margin-bottom:8%; gap:12px;}
-  .game-button{padding:10px; font-size:12px; border-radius:5px; box-shadow:0 2px 4px rgba(0,0,0,.2);}
-  .game-button:active{background:#2c5282; transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,.3);}
-}
-
-/* ------------------- D-PAD (buttons + triangles) ------------------- */
-/* Responsive constants so it never clips and meets tap-size rules */
-:root{
-  --pad: clamp(120px, 22vmin, 220px);        /* overall square size */
-  --gap: clamp(10px, 2.2vmin, 18px);         /* gaps inside grid */
-  --triW: calc(var(--pad) * 0.18);           /* triangle half width */
-  --triH: calc(var(--pad) * 0.30);           /* triangle height */
-  --hit: 48px;                                /* minimum tap target */
-  --triColor: #1a365d;
-  --triActive: #2c5282;
-}
-
-/* Container is hidden by default on desktop; shown in phone landscape via media query above */
-.mobile-controls{ display:none; }
-
-/* Use .dpad for a perfect square grid */
-.dpad{
-  width: var(--pad);
-  height: var(--pad);
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows:    1fr 1fr 1fr;
-  gap: var(--gap);
-  place-items: center;
-}
-
-/* Empty grid spacers keep format exactly like your diagram */
-.spacer{ width:100%; height:100%; }
-
-/* Base triangle button */
-.mobile-btn{
-  position: relative;
-  display: inline-block;
-  width: var(--hit);
-  height: var(--hit);
+.mobile-btn {
+  width: 64px;              /* guaranteed tap target */
+  height: 64px;
+  border: none;
   background: transparent;
-  border: 0;
-  padding: 0;
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  outline: none;
+  position: relative;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.25));
+  transition: transform .1s ease, filter .15s ease;
+}
+.mobile-btn:active { transform: scale(0.95); filter: brightness(1.15) drop-shadow(0 3px 6px rgba(0,0,0,.3)); }
+.mobile-btn span { display: none; }
+
+/* SVG triangle icons as backgrounds (never clip) */
+:root {
+  --tri-fill: %231a365d;    /* URL-encoded #1a365d */
+}
+.up-btn {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,8 92,92 8,92' fill='var(--tri-color, #%201a365d)'/></svg>");
+  background-image: url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,8 92,92 8,92' fill='%231a365d'/></svg>\");
+}
+.down-btn {
+  background-image: url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='8,8 92,8 50,92' fill='%231a365d'/></svg>\");
+}
+.left-btn {
+  background-image: url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='8,50 92,8 92,92' fill='%231a365d'/></svg>\");
+}
+.right-btn {
+  background-image: url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='92,50 8,8 8,92' fill='%231a365d'/></svg>\");
+}
+.up-btn, .down-btn, .left-btn, .right-btn {
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  border-radius: 12px;               /* soft touch area corners */
 }
 
-/* Large invisible hit-area so taps are easy but triangles stay visually small */
-.mobile-btn::after{
-  content:"";
-  position:absolute; inset:0;
+/* Larger targets on coarse pointers */
+@media (pointer: coarse) {
+  .mobile-btn { width: 72px; height: 72px; }
 }
 
-/* Visual triangle using the border trick, centered within the hit area */
-.mobile-btn::before{
-  content:"";
-  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-  width:0; height:0;
-  border-style: solid;
+/* D-pad layout */
+.middle-row { display: flex; gap: 45px; justify-content: center; }
+
+/* Rotation overlay */
+.rotation-overlay {
+  display: none; position: fixed; inset: 0; background-color: #000; z-index: 9999;
+  flex-direction: column; justify-content: center; align-items: center; color: white;
+  font-family: Arial, sans-serif; padding: 24px; box-sizing: border-box;
+}
+.rotation-overlay h1 { font-size: 24px; margin-bottom: 20px; text-align: center; }
+.rotation-overlay p  { font-size: 18px; text-align: center; margin: 0; }
+.phone-icon { font-size: 48px; margin-bottom: 20px; animation: rotate 2s linear infinite; }
+@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(90deg); } }
+
+/* ---------- Mobile Portrait ---------- */
+@media (max-width: 768px) and (orientation: portrait) {
+  .rotation-overlay { display: flex; }
+  #gameContainer { display: none; }
 }
 
-/* Directions + grid placement */
-.up-btn   { grid-column:2; grid-row:1; }
-.left-btn { grid-column:1; grid-row:2; }
-.right-btn{ grid-column:3; grid-row:2; }
-.down-btn { grid-column:2; grid-row:3; }
+/* ---------- Mobile Landscape ---------- */
+@media (max-width: 1024px) and (orientation: landscape) {
+  .rotation-overlay { display: none; }
+  
+  .container {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    height: 100svh;     /* safe viewport height */
+    padding: 10px;
+    gap: 10px;
+    max-width: none;
+    box-sizing: border-box;
+  }
 
-/* Triangle geometry */
-.up-btn::before{
-  border-width: 0 var(--triW) var(--triH) var(--triW);
-  border-color: transparent transparent var(--triColor) transparent;
+  .left-section {
+    width: 25%;
+    text-align: center;
+    display: flex; flex-direction: column; justify-content: center;
+    gap: 20px; padding: 0 10px;
+  }
+
+  .left-section h1 { font-size: 20px; font-weight: bold; margin: 0; margin-top: -30px; margin-bottom: 10px; }
+  .left-section .game-title { font-size: 14px; margin: 5px 0; }
+  .left-section #message    { font-size: 14px; margin: 5px 0; margin-top: 10px; }
+
+  .center-section { width: 50%; display: flex; align-items: center; justify-content: center; }
+
+  .right-section {
+    width: 25%;
+    display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+    height: 90%; padding: 0 10px; box-sizing: border-box;
+  }
+
+  .controls { display: flex; flex-direction: column; align-items: center; margin-bottom: 12%; gap: 20px; }
+
+  .game-button {
+    padding: 10px; font-size: 12px; width: auto; border-radius: 5px; background-color: #1a365d;
+    color: white; border: none; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .game-button:active { background-color: #2c5282; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+
+  /* Make the D-pad a tidy grid so arrows never clip */
+  .mobile-controls {
+    display: grid;
+    grid-template-columns: repeat(3, min-content);
+    grid-template-rows: repeat(3, min-content);
+    place-items: center;
+    margin-bottom: 0;
+    gap: 18px;
+  }
+
+  /* Position in grid:  ↑ at (2,1), ↓ at (2,3), ← at (1,2), → at (3,2)  */
+  .up-btn    { grid-column: 2; grid-row: 1; }
+  .down-btn  { grid-column: 2; grid-row: 3; }
+  .left-btn  { grid-column: 1; grid-row: 2; }
+  .right-btn { grid-column: 3; grid-row: 2; }
+
+  canvas {
+    max-height: 90svh;
+    width: auto;
+    background-color: white;
+    border: 2px solid #333; border-radius: 5px;
+  }
 }
-.up-btn:active::before{ border-bottom-color: var(--triActive); }
 
-.down-btn::before{
-  border-width: var(--triH) var(--triW) 0 var(--triW);
-  border-color: var(--triColor) transparent transparent transparent;
+/* ------------- Modal ------------- */
+.modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); }
+
+.modal-content {
+  background-color: #fefefe;
+  margin: 8% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 70%;
+  max-width: 500px;
+  border-radius: 5px;
+  position: relative;
+  text-align: left;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  max-height: 70vh;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
-.down-btn:active::before{ border-top-color: var(--triActive); }
+.modal-content h2 { color: #333; margin-top: 0; text-align: center; font-size: 24px; margin-bottom: 20px; }
+.modal-content h3 { color: #1a365d; margin-top: 15px; margin-bottom: 8px; font-size: 18px; }
+.modal-content ul { color: #666; line-height: 1.6; margin-bottom: 15px; padding-left: 25px; }
+.modal-content li { margin-bottom: 6px; font-size: 14px; }
+.modal-content button { display: block; margin: 20px auto 0; }
 
-.left-btn::before{
-  border-width: var(--triW) var(--triH) var(--triW) 0;
-  border-color: transparent var(--triColor) transparent transparent;
-}
-.left-btn:active::before{ border-right-color: var(--triActive); }
-
-.right-btn::before{
-  border-width: var(--triW) 0 var(--triW) var(--triH);
-  border-color: transparent transparent transparent var(--triColor);
-}
-.right-btn:active::before{ border-left-color: var(--triActive); }
-
-/* Make triangles 15% smaller vertically on phones (your request) */
-@media (max-width:768px){
-  :root{ --triH: calc(var(--triH) * 0.85); }
-}
-
-/* ------------- Modal (kept) ------------- */
-.modal{display:none; position:fixed; z-index:1; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,.4);}
-.modal-content{background:#fefefe; margin:8% auto; padding:20px; border:1px solid #888; width:70%; max-width:500px; border-radius:5px; position:relative; text-align:left; box-shadow:0 4px 8px rgba(0,0,0,.2); max-height:70vh; overflow-y:auto; box-sizing:border-box;}
-.modal-content h2{color:#333; margin-top:0; text-align:center; font-size:24px; margin-bottom:20px;}
-.modal-content h3{color:#1a365d; margin-top:15px; margin-bottom:8px; font-size:18px;}
-.modal-content ul{color:#666; line-height:1.6; margin-bottom:15px; padding-left:25px;}
-.modal-content li{margin-bottom:6px; font-size:14px;}
-.modal-content button{display:block; margin:20px auto 0;}
-@media (max-width:768px){
-  .modal-content{width:90%; margin:5% auto; padding:15px;}
-  .modal-content h2{font-size:20px;}
-  .modal-content h3{font-size:16px;}
-  .modal-content li{font-size:12px;}
+@media (max-width: 768px) {
+  .modal-content { width: 90%; margin: 5% auto; padding: 15px; }
+  .modal-content h2 { font-size: 20px; }
+  .modal-content h3 { font-size: 16px; }
+  .modal-content li { font-size: 12px; }
 }
