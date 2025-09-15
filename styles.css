@@ -71,8 +71,8 @@ canvas {
 .controls {
   display: flex;
   justify-content: center;
-  gap: 15px;
-  margin: 0 0 5px 0;        /* moved up higher (was 10–20px) */
+  gap: 12px;                 /* closer horizontally */
+  margin: 0 0 0 0;           /* push higher, no bottom margin */
   flex-wrap: wrap;
 }
 .game-button {
@@ -120,7 +120,7 @@ canvas {
 .left-btn  { grid-column: 1; grid-row: 2; }
 .right-btn { grid-column: 3; grid-row: 2; }
 
-/* Triangles (larger now) */
+/* Triangles (large for touch) */
 .up-btn {
   border-left: 18px solid transparent;
   border-right: 18px solid transparent;
@@ -202,7 +202,7 @@ canvas {
     width: 25%;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;   /* push buttons higher */
+    justify-content: flex-start;     /* keep buttons at top */
     align-items: center;
     height: 90%;
     padding: 0 10px;
@@ -213,8 +213,9 @@ canvas {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 4%;            /* much higher now */
-    gap: 16px;
+    margin-top: 0;                   /* top-aligned */
+    margin-bottom: 2%;               /* less gap below */
+    gap: 10px;                       /* closer together vertically */
   }
   .game-button {
     padding: 10px;
