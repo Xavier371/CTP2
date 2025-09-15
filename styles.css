@@ -28,13 +28,7 @@ body {
 
 .left-section { text-align: center; width: 100%; }
 .center-section { width: 100%; display: flex; justify-content: center; margin: 10px 0; }
-.right-section {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  overflow: visible;
-}
+.right-section { width: 100%; display: flex; flex-direction: column; align-items: center; overflow: visible; }
 
 /* ===================== TITLES / TEXT ===================== */
 h1 {
@@ -76,28 +70,28 @@ canvas {
 /* ===================== TOP CONTROLS ===================== */
 .controls {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 0;
-  gap: 6px;                  /* very close together */
+  justify-content: center;
+  gap: 15px;
+  margin: 10px 0;              /* moved up (was 20px) */
+  flex-wrap: wrap;
 }
 .game-button {
   background-color: #1a365d;
   color: white;
-  padding: 12px 24px;
+  padding: 16px 32px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 600;
   transition: all 0.3s;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
   letter-spacing: 0.5px;
 }
 .game-button:hover {
   background-color: #2c5282;
   transform: translateY(-2px);
-  box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
 }
 
 /* ===================== MOBILE D-PAD (TRIANGLES) ===================== */
@@ -126,29 +120,29 @@ canvas {
 .left-btn  { grid-column: 1; grid-row: 2; }
 .right-btn { grid-column: 3; grid-row: 2; }
 
-/* Triangles */
+/* Triangles (slightly smaller) */
 .up-btn {
-  border-left: 18px solid transparent;
-  border-right: 18px solid transparent;
-  border-bottom: 26px solid #1a365d;
+  border-left: 22px solid transparent;
+  border-right: 22px solid transparent;
+  border-bottom: 32px solid #1a365d;
   margin-bottom: -2px;
 }
 .down-btn {
-  border-left: 18px solid transparent;
-  border-right: 18px solid transparent;
-  border-top: 26px solid #1a365d;
+  border-left: 22px solid transparent;
+  border-right: 22px solid transparent;
+  border-top: 32px solid #1a365d;
   margin-top: -2px;
 }
 .left-btn {
-  border-top: 18px solid transparent;
-  border-bottom: 18px solid transparent;
-  border-right: 26px solid #1a365d;
+  border-top: 22px solid transparent;
+  border-bottom: 22px solid transparent;
+  border-right: 32px solid #1a365d;
   margin-right: -2px;
 }
 .right-btn {
-  border-top: 18px solid transparent;
-  border-bottom: 18px solid transparent;
-  border-left: 26px solid #1a365d;
+  border-top: 22px solid transparent;
+  border-bottom: 22px solid transparent;
+  border-left: 32px solid #1a365d;
   margin-left: -2px;
 }
 .mobile-btn:active { transform: scale(0.96); }
@@ -208,7 +202,7 @@ canvas {
     width: 25%;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: space-between;
     align-items: center;
     height: 90%;
     padding: 0 10px;
@@ -219,9 +213,9 @@ canvas {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-top: 0;
-    margin-bottom: 0;
-    gap: 6px;
+    margin-bottom: 0%;         /* moved to very top */
+    margin-top: -10px;         /* negative margin to push higher */
+    gap: 4px;                  /* extremely tight spacing */
   }
   .game-button {
     padding: 10px;
@@ -243,7 +237,7 @@ canvas {
     place-items: center;
     gap: 12px;
     margin: 0 auto;
-    transform: translateY(12px);   /* ▼ moved D-pad down */
+    transform: translateY(-6px);
   }
   canvas {
     max-height: 90svh;
