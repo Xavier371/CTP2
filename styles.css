@@ -65,58 +65,49 @@ canvas {
 .mobile-controls{
   z-index: 10;
   margin: 0;
-  gap: 14px;
   display: grid;
-  grid-template-columns: repeat(3, min-content);
-  grid-template-rows: repeat(3, min-content);
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
   place-items: center;
+  gap: 8px; /* tighter spacing */
 }
 
 .mobile-btn{
-  width: 44px;
-  height: 44px;
-  background: transparent;
+  width: 0;
+  height: 0;
+  background: none;
   border: none;
-  position: relative;
   padding: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
-.mobile-btn:active{ transform: scale(0.96); }
 .mobile-btn span{ display:none; }
 
-.mobile-btn::before{
-  content:"";
-  position:absolute;
-  inset: 50% auto auto 50%;
-  transform: translate(-50%,-50%);
-  width:0; height:0;
-  border-style: solid;
-  --tW: 14px;
-  --tH: 22px;
+/* Triangles drawn purely with borders (no box) */
+.up-btn{
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-bottom: 22px solid #1a365d;
+  grid-column: 2; grid-row: 1;
 }
-
-.up-btn   { grid-column:2; grid-row:1; }
-.down-btn { grid-column:2; grid-row:3; }
-.left-btn { grid-column:1; grid-row:2; }
-.right-btn{ grid-column:3; grid-row:2; }
-
-.up-btn::before{
-  border-width: 0 var(--tW) var(--tH) var(--tW);
-  border-color: transparent transparent #1a365d transparent;
+.down-btn{
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 22px solid #1a365d;
+  grid-column: 2; grid-row: 3;
 }
-.down-btn::before{
-  border-width: var(--tH) var(--tW) 0 var(--tW);
-  border-color: #1a365d transparent transparent transparent;
+.left-btn{
+  border-top: 14px solid transparent;
+  border-bottom: 14px solid transparent;
+  border-right: 22px solid #1a365d;
+  grid-column: 1; grid-row: 2;
 }
-.left-btn::before{
-  border-width: var(--tW) var(--tH) var(--tW) 0;
-  border-color: transparent #1a365d transparent transparent;
-}
-.right-btn::before{
-  border-width: var(--tW) 0 var(--tW) var(--tH);
-  border-color: transparent transparent transparent #1a365d;
+.right-btn{
+  border-top: 14px solid transparent;
+  border-bottom: 14px solid transparent;
+  border-left: 22px solid #1a365d;
+  grid-column: 3; grid-row: 2;
 }
 
 /* ---------------- ROTATION OVERLAY ---------------- */
