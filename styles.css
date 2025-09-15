@@ -28,7 +28,13 @@ body {
 
 .left-section { text-align: center; width: 100%; }
 .center-section { width: 100%; display: flex; justify-content: center; margin: 10px 0; }
-.right-section { width: 100%; display: flex; flex-direction: column; align-items: center; overflow: visible; }
+.right-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: visible;
+}
 
 /* ===================== TITLES / TEXT ===================== */
 h1 {
@@ -70,28 +76,28 @@ canvas {
 /* ===================== TOP CONTROLS ===================== */
 .controls {
   display: flex;
-  justify-content: center;
-  gap: 12px;                 /* closer horizontally */
-  margin: 0 0 0 0;           /* push higher, no bottom margin */
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;                 /* no bottom margin */
+  gap: 6px;                  /* very close together */
 }
 .game-button {
   background-color: #1a365d;
   color: white;
-  padding: 14px 28px;
+  padding: 12px 24px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   transition: all 0.3s;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
   letter-spacing: 0.5px;
 }
 .game-button:hover {
   background-color: #2c5282;
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+  box-shadow: 0 5px 10px rgba(0,0,0,0.3);
 }
 
 /* ===================== MOBILE D-PAD (TRIANGLES) ===================== */
@@ -202,7 +208,7 @@ canvas {
     width: 25%;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;     /* keep buttons at top */
+    justify-content: flex-start;     /* keep buttons at very top */
     align-items: center;
     height: 90%;
     padding: 0 10px;
@@ -213,9 +219,9 @@ canvas {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-top: 0;                   /* top-aligned */
-    margin-bottom: 2%;               /* less gap below */
-    gap: 10px;                       /* closer together vertically */
+    margin-top: 0;
+    margin-bottom: 0;                /* no gap below */
+    gap: 6px;                        /* buttons closer together */
   }
   .game-button {
     padding: 10px;
