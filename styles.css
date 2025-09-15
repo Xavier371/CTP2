@@ -1,162 +1,298 @@
+/* ===================== BASE / RESET ===================== */
+html { height: 100%; -webkit-text-size-adjust: 100%; }
 body {
-    margin: 0;
-    padding: 0;
-    background-color: #f0f0f0;
-    font-family: Arial, sans-serif;
-    touch-action: manipulation;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  margin: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background-color: #f0f0f0;
+  font-family: Arial, sans-serif;
+  touch-action: manipulation;
+  min-height: 100svh;                /* robust vs iOS address bar */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: hidden;
 }
 
+/* ===================== LAYOUT ===================== */
 .container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-    padding: 20px;
-    width: 100%;
-    max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  width: 100%;
+  max-width: 900px;
+  box-sizing: border-box;
 }
 
-.left-section {
-    text-align: center;
-    width: 100%;
-}
+.left-section { text-align: center; width: 100%; }
+.center-section { width: 100%; display: flex; justify-content: center; margin: 10px 0; }
+.right-section { width: 100%; display: flex; flex-direction: column; align-items: center; overflow: visible; }
 
+/* ===================== TITLES / TEXT ===================== */
 h1 {
-    color: #333;
-    margin: 0;
-    font-size: 36px;
-    font-weight: bold;
-    letter-spacing: 1px;
+  color: #333;
+  margin: 0;
+  font-size: 36px;
+  font-weight: bold;
+  letter-spacing: 1px;
 }
-
 .game-title {
-    font-size: 24px;
-    color: #333;
-    margin: 15px 0;
-    font-weight: 500;
+  font-size: 24px;
+  color: #333;
+  margin: 15px 0;
+  font-weight: 500;
 }
-
 #message {
-    font-size: 22px;
-    color: #333;
-    margin: 15px 0;
-    font-weight: normal;
-    text-decoration: underline;
-    min-height: 30px;
-    line-height: 1.4;
+  font-size: 22px;
+  color: #333;
+  margin: 15px 0;
+  font-weight: normal;
+  text-decoration: underline;
+  min-height: 30px;
+  line-height: 1.4;
 }
+#message.blue-wins { color: #1a365d; font-weight: bold; }
+#message.red-wins  { color: #8B0000; font-weight: bold; }
 
-#message.blue-wins {
-    color: #1a365d;
-    font-weight: bold;
-}
-
-#message.red-wins {
-    color: #8B0000;
-    font-weight: bold;
-}
-
-.center-section {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    margin: 10px 0;
-}
-
+/* ===================== CANVAS ===================== */
 canvas {
-    background-color: white;
-    border: 3px solid #333;
-    border-radius: 8px;
-    margin: 10px 0;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  background-color: white;
+  border: 3px solid #333;
+  border-radius: 8px;
+  margin: 10px 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-width: 100%;         /* never overflow width */
+  height: auto;            /* keep aspect ratio */
 }
 
+/* ===================== TOP CONTROLS ===================== */
 .controls {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin: 20px 0;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin: 20px 0;
+  flex-wrap: wrap;         /* prevent clipping on narrow widths */
 }
-
 .game-button {
-    background-color: #1a365d;
-    color: white;
-    padding: 16px 32px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 18px;
-    font-weight: 600;
-    transition: all 0.3s;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    letter-spacing: 0.5px;
+  background-color: #1a365d;
+  color: white;
+  padding: 16px 32px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 600;
+  transition: all 0.3s;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  letter-spacing: 0.5px;
 }
-
 .game-button:hover {
-    background-color: #2c5282;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+  background-color: #2c5282;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
 }
 
-/* --- FIXED D-PAD TRIANGLES --- */
+/* ===================== MOBILE D-PAD (TRIANGLES) ===================== */
+/* Hidden by default; shown in mobile landscape */
 .mobile-controls {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px; /* tighter spacing */
-    margin: 0;
-    position: relative;
-    z-index: 10;
+  display: none;
+  margin: 0;
+  z-index: 10;
 }
 
+/* Triangle buttons: pure border triangles (no boxes). */
 .mobile-btn {
-    width: 0;
-    height: 0;
-    border: none;
-    background: none;
-    padding: 0;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
+  all: unset;                  /* strip UA styles so no square box appears */
+  display: block;
+  width: 0;
+  height: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  line-height: 0;
+  background: none !important; /* prevent any background images */
+  box-shadow: none !important;
+  border-radius: 0 !important;
 }
 .mobile-btn span { display: none; }
 
+/* Positions when grid is active (set in mobile landscape media query) */
+.up-btn    { grid-column: 2; grid-row: 1; }
+.down-btn  { grid-column: 2; grid-row: 3; }
+.left-btn  { grid-column: 1; grid-row: 2; }
+.right-btn { grid-column: 3; grid-row: 2; }
+
+/* Triangle sizes (compact + closer together) */
 .up-btn {
-    border-left: 14px solid transparent;
-    border-right: 14px solid transparent;
-    border-bottom: 22px solid #1a365d;
-    margin-bottom: -2px;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-bottom: 18px solid #1a365d;
+  margin-bottom: -2px;
 }
 .down-btn {
-    border-left: 14px solid transparent;
-    border-right: 14px solid transparent;
-    border-top: 22px solid #1a365d;
-    margin-top: -2px;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 18px solid #1a365d;
+  margin-top: -2px;
 }
 .left-btn {
-    border-top: 14px solid transparent;
-    border-bottom: 14px solid transparent;
-    border-right: 22px solid #1a365d;
-    margin-right: -2px;
+  border-top: 12px solid transparent;
+  border-bottom: 12px solid transparent;
+  border-right: 18px solid #1a365d;
+  margin-right: -2px;
 }
 .right-btn {
-    border-top: 14px solid transparent;
-    border-bottom: 14px solid transparent;
-    border-left: 22px solid #1a365d;
-    margin-left: -2px;
+  border-top: 12px solid transparent;
+  border-bottom: 12px solid transparent;
+  border-left: 18px solid #1a365d;
+  margin-left: -2px;
 }
 
-.middle-row {
-    display: flex;
-    gap: 24px; /* closer together */
-    justify-content: center;
+/* Extra nudge on press */
+.mobile-btn:active { transform: scale(0.96); }
+
+/* Legacy row wrapper (if present in your HTML) */
+.middle-row { display: flex; gap: 36px; justify-content: center; }
+
+/* ===================== ROTATION OVERLAY ===================== */
+.rotation-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-color: #000;
+  z-index: 9999;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-family: Arial, sans-serif;
+  padding: 24px;
+  box-sizing: border-box;
+}
+.rotation-overlay h1 { font-size: 24px; margin-bottom: 20px; text-align: center; }
+.rotation-overlay p  { font-size: 18px; text-align: center; margin: 0; }
+.phone-icon { font-size: 48px; margin-bottom: 20px; animation: rotate 2s linear infinite; }
+@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(90deg); } }
+
+/* ===================== MEDIA QUERIES ===================== */
+/* Portrait phones: show rotate overlay, hide game */
+@media (max-width: 768px) and (orientation: portrait) {
+  .rotation-overlay { display: flex; }
+  #gameContainer { display: none; }
+}
+
+/* Mobile / small-tablet landscape: three-column layout + show D-pad */
+@media (max-width: 1024px) and (orientation: landscape) {
+  .rotation-overlay { display: none; }
+
+  .container {
+    flex-direction: row;
+    justify-content: space-between;
     align-items: center;
+    height: 100svh;                /* safe viewport height */
+    padding: 10px;
+    gap: 10px;
+    max-width: none;
+    box-sizing: border-box;
+  }
+
+  .left-section {
+    width: 25%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+    padding: 0 10px;
+  }
+  .left-section h1 { font-size: 20px; font-weight: bold; margin: 0; margin-top: -30px; margin-bottom: 10px; }
+  .left-section .game-title { font-size: 14px; margin: 5px 0; }
+  .left-section #message    { font-size: 14px; margin: 5px 0; margin-top: 10px; }
+
+  .center-section { width: 50%; display: flex; align-items: center; justify-content: center; }
+
+  .right-section {
+    width: 25%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    height: 90%;
+    padding: 0 10px;
+    box-sizing: border-box;
+    overflow: visible;             /* D-pad cannot be clipped */
+  }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 12%;
+    gap: 20px;
+  }
+
+  .game-button {
+    padding: 10px;
+    font-size: 12px;
+    width: auto;
+    border-radius: 5px;
+    background-color: #1a365d;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .game-button:active { background-color: #2c5282; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+
+  /* SHOW D-pad as a tight 3×3 grid and lift it slightly */
+  .mobile-controls {
+    display: grid !important;
+    grid-template-columns: repeat(3, auto);
+    grid-template-rows: repeat(3, auto);
+    place-items: center;
+    gap: 12px;                     /* closer together */
+    margin: 0 auto;
+    transform: translateY(-6px);   /* move slightly up */
+  }
+
+  canvas {
+    max-height: 90svh;
+    width: auto;
+    background-color: white;
+    border: 2px solid #333;
+    border-radius: 5px;
+  }
 }
 
-/* Ensure always visible */
-@media (max-width: 768px) and (orientation: landscape) {
-    .mobile-controls { display: flex !important; }
+/* ===================== MODAL ===================== */
+.modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); }
+.modal-content {
+  background-color: #fefefe;
+  margin: 8% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 70%;
+  max-width: 500px;
+  border-radius: 5px;
+  position: relative;
+  text-align: left;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  max-height: 70vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+.modal-content h2 { color: #333; margin-top: 0; text-align: center; font-size: 24px; margin-bottom: 20px; }
+.modal-content h3 { color: #1a365d; margin-top: 15px; margin-bottom: 8px; font-size: 18px; }
+.modal-content ul { color: #666; line-height: 1.6; margin-bottom: 15px; padding-left: 25px; }
+.modal-content li { margin-bottom: 6px; font-size: 14px; }
+.modal-content button { display: block; margin: 20px auto 0; }
+
+@media (max-width: 768px) {
+  .modal-content { width: 90%; margin: 5% auto; padding: 15px; }
+  .modal-content h2 { font-size: 20px; }
+  .modal-content h3 { font-size: 16px; }
+  .modal-content li { font-size: 12px; }
 }
