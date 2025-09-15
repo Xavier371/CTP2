@@ -219,7 +219,7 @@ function isMobileDevice() {
 }
 
 function initializeMobileControls() {
-  const redControls = { 'up-btn':'w', 'down-btn':'s', 'left-btn':'a', 'right-btn':'d' };
+  const redControls  = { 'up-btn':'w', 'down-btn':'s', 'left-btn':'a', 'right-btn':'d' };
   const blueControls = { 'up-btn':'ArrowUp', 'down-btn':'ArrowDown', 'left-btn':'ArrowLeft', 'right-btn':'ArrowRight' };
 
   Object.keys(redControls).forEach(className => {
@@ -232,7 +232,7 @@ function initializeMobileControls() {
       updateMobileButtonColors();
     };
     el.addEventListener('touchstart', handler, { passive: false });
-    el.addEventListener('click', handler); // also works on tablets that fire click
+    el.addEventListener('click', handler);
   });
 }
 
