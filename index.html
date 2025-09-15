@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Proper mobile scaling + notch support; disables pinch-zoom to prevent layout shift -->
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Point Chase Game</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Portrait-only overlay -->
+  <!-- Portrait overlay -->
   <div class="rotation-overlay">
     <div class="phone-icon">📱</div>
     <h1>Please Rotate Your Phone</h1>
@@ -22,26 +21,35 @@
       <div id="gameTitle" class="game-title"></div>
       <div id="message"></div>
     </div>
-    
+
     <div class="center-section">
       <canvas id="gameCanvas"></canvas>
     </div>
 
     <div class="right-section">
+      <!-- Top-right buttons (per your diagram) -->
       <div class="controls">
         <button onclick="resetGame()" class="game-button">Reset</button>
         <button onclick="toggleMode()" id="modeBtn" class="game-button">Offense</button>
         <button onclick="showInstructions()" class="game-button">Help</button>
       </div>
 
-      <!-- Mobile D-pad -->
-      <div id="mobileControls" class="mobile-controls" aria-label="Mobile controls">
-        <button class="mobile-btn up-btn"><span>↑</span></button>
-        <div class="middle-row">
-          <button class="mobile-btn left-btn"><span>←</span></button>
-          <button class="mobile-btn right-btn"><span>→</span></button>
-        </div>
-        <button class="mobile-btn down-btn"><span>↓</span></button>
+      <!-- Bottom-right D-pad (exact 3×3 grid) -->
+      <div id="mobileControls" class="mobile-controls dpad" aria-label="Mobile controls">
+        <!-- Row 1 -->
+        <div class="spacer"></div>
+        <button class="mobile-btn up-btn" aria-label="Up"></button>
+        <div class="spacer"></div>
+
+        <!-- Row 2 -->
+        <button class="mobile-btn left-btn" aria-label="Left"></button>
+        <div class="spacer"></div>
+        <button class="mobile-btn right-btn" aria-label="Right"></button>
+
+        <!-- Row 3 -->
+        <div class="spacer"></div>
+        <button class="mobile-btn down-btn" aria-label="Down"></button>
+        <div class="spacer"></div>
       </div>
     </div>
   </div>
